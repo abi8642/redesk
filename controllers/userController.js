@@ -8,20 +8,29 @@ const task = require("../models/task");
 
 exports.sendOtp = async (req, res) => {
   const { email } = req.body;
-  const user = await User.findOne({ email, status: "approved" });
+  try {
+    const user = await User.findOne({ email, status: "approved" });
 
-  if (!user) {
-    return res.status(400).send({ status: "400", message: "Email not found" });
+    if (!user) {
+      return res
+        .status(400)
+        .send({ status: "400", message: "Email not found" });
+    }
+    const otp = Math.floor(100000 + Math.random() * 900000);
+
+    sendMail(email, "OTP for login", `Your OTP for login is ${otp}`);
+
+    const updateUser = await User.updateMany({ email }, { otp });
+    return res
+      .status(200)
+      .send({ status: "200", message: "OTP sent successfully" });
+  } catch (err) {
+    return res
+      .status(400)
+      .send({ status: "400", message: "Unable to send OTP" });
   }
-  const otp = Math.floor(100000 + Math.random() * 900000);
-
-  sendMail(email, "OTP for login", `Your OTP for login is <b>${otp}</b>`);
-
-  const updateUser = await User.updateMany({ email }, { otp });
-  return res
-    .status(200)
-    .send({ status: "200", message: "OTP sent successfully" });
 };
+
 exports.verifyOtp = async (req, res) => {
   const { email, otp } = req.body;
   const user = await User.findOne({ email, otp }).populate(
@@ -98,6 +107,7 @@ exports.verifyOtp = async (req, res) => {
   }
 };
 
+// ****************************************************************
 exports.requestToken = async (req, res) => {
   const token = req.headers.authorization.split(" ")[1];
   let decoded = jwt.verify(token, process.env.ACCOUNT_ACTIVATION);
@@ -139,6 +149,7 @@ exports.requestToken = async (req, res) => {
     }
   );
 };
+// ****************************************************************
 
 exports.signup = (req, res) => {
   // Check whether email already exists

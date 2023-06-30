@@ -21,10 +21,10 @@ exports.requiredAuth =
           .status(401)
           .send({ status: "401", message: "Unauthorized!" + err });
       }
-      // console.log(decoded.role);
-      if (role.length != 0 && !role.includes(decoded.role)) {
-        return res.status(403).send({ error: 1, msg: "access denied." });
-      }
+      console.log(decoded);
+      // if (role.length != 0 && !role.includes(decoded.role)) {
+      //   return res.status(403).send({ error: 1, msg: "access denied." });
+      // }
 
       // get user details using token
       const _id = decoded._id;

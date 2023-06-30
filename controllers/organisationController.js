@@ -20,6 +20,7 @@ const transporter = nodemailer.createTransport({
 
 // user: "subhadev1289@gmail.com",
 // pass: "yzchxkbxrizezpet",
+
 exports.createOrganisation = async (req, res) => {
   // Check whether email already exists
   const {
@@ -284,6 +285,8 @@ exports.createOrganisationfromEmail = async (req, res) => {
     });
   }
 };
+
+// *************
 exports.verifyOrganisation = (req, res) => {
   const { token } = req.query;
   if (token) {
@@ -295,6 +298,7 @@ exports.verifyOrganisation = (req, res) => {
         });
       }
 
+      // console.log("decoded", decoded);
       const { _id, organisation } = decoded;
       User.findOne({ _id, organisation }, async (err, user) => {
         if (err || !user) {
@@ -336,6 +340,8 @@ exports.verifyOrganisation = (req, res) => {
     });
   }
 };
+// *************
+
 exports.checkSubDomain = (req, res) => {
   const { sub_domain } = req.body;
   Organisation.findOne({ sub_domain }, (err, subdomain) => {
@@ -354,6 +360,7 @@ exports.checkSubDomain = (req, res) => {
 
 exports.sendInviteFromOrganisation = async (req, res) => {
   const user = req.user;
+  console.log("req.user = " + req.user);
 
   const { email } = req.body;
 
@@ -377,12 +384,12 @@ exports.sendInviteFromOrganisation = async (req, res) => {
           from: "invite@apptimates.com",
           to: email,
           subject: "Please set up your account for Redesk",
-          text: `Please click on the link to set up your account for ${organisation.organisation_name} at Redesk http://redesk.in/signup?token=${emailToken}&email=${email}`,
+          text: `Please click on the link to set up your account for ${organisation.organisation_name} at Redesk http://dev.redesk.in/signup?token=${emailToken}&email=${email}`,
         });
 
         return res.status(201).send({
           status: "201",
-          message: "Successfully sent invites",
+          message: "Successfully sent invitation",
         });
       }
     );
@@ -390,11 +397,12 @@ exports.sendInviteFromOrganisation = async (req, res) => {
     console.log(err);
     return res.status(400).send({
       status: "500",
-      message: "Unable to signup. Try again later",
+      message: "Unable to send invitation. Try again later",
       err,
     });
   }
 };
+
 exports.sendInviteFromCSV = async (req, res) => {
   const user = req.user;
 
@@ -609,6 +617,7 @@ exports.createCategory = async (req, res) => {
     });
   }
 };
+
 exports.allCategories = async (req, res) => {
   try {
     const user = req.user;
@@ -630,6 +639,7 @@ exports.allCategories = async (req, res) => {
     });
   }
 };
+
 exports.editCategory = async (req, res) => {
   try {
     const user = req.user;

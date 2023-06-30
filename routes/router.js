@@ -80,6 +80,7 @@ const {
   verifyOrganisation,
   getDashboardDetails,
   sendInviteFromCSV,
+  verifyEmailInvite,
   createCategory,
   editCategory,
   allCategories,
@@ -123,6 +124,7 @@ router.post(
   requiredAuth(["admin", "subadmin", "team_leader"]),
   sendInviteFromCSV
 );
+router.post("/verifyEmailInvite", verifyEmailInvite);
 router.get("/getdashboarddetails", requiredAuth(), getDashboardDetails);
 
 router.post("/createCategory", requiredAuth(), createCategory);

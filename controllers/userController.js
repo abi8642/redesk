@@ -41,18 +41,21 @@ exports.verifyOtp = async (req, res) => {
     return res.status(400).send({ status: "400", message: "Email not found" });
   }
 
+  // console.log("user: " + user);
+
   let orgs = [];
   // user.forEach((u) => {
   //   orgs.push(u.organisation_list);
   // });
   orgs.push(...user.organisation_list);
-  //if one then jwtb token
-  // console.log(orgs);
+  // if one then jwt token
+
   if (orgs.length == 1) {
+    // console.log("orgs", orgs);
     jwt.sign(
-      { _id: user._id, email: user.email, organisation: orgs[0].organisation },
+      { _id: user._id, email: user.email, organisation: orgs[0] },
       process.env.SECRET,
-      { expiresIn: "1h" },
+      { expiresIn: "1d" },
       async (err, token) => {
         if (err) {
           return res.status(400).send({ status: "400", message: err });
@@ -84,7 +87,7 @@ exports.verifyOtp = async (req, res) => {
     jwt.sign(
       { _id: user._id, email: user.email },
       process.env.ACCOUNT_ACTIVATION,
-      { expiresIn: "1h" },
+      { expiresIn: "1d" },
       async (err, token) => {
         if (err) {
           return res.status(400).send({ status: "400", message: err });
@@ -187,6 +190,7 @@ exports.signup = (req, res) => {
     });
   });
 };
+
 exports.signupwithorgs = async (req, res) => {
   // Check whether email already exists
   const { email, token } = req.body;
@@ -366,6 +370,7 @@ exports.signin = (req, res) => {
     }
   });
 };
+
 exports.signinwithorgs = async (req, res) => {
   const { email, password, sub_domain } = req.body;
 
@@ -485,6 +490,7 @@ exports.getUser = (req, res) => {
     });
   }
 };
+
 exports.allUserFromOrgs = (req, res) => {
   const user = req.user;
   // console.log("asda" + req.io);
@@ -554,6 +560,7 @@ exports.getEmployeeList = (req, res) => {
     });
   }
 };
+
 exports.getTeamLeaderList = (req, res) => {
   const user = req.user;
   // console.log("asda" + req.io);
@@ -584,6 +591,7 @@ exports.getTeamLeaderList = (req, res) => {
     });
   }
 };
+
 exports.getObserversList = (req, res) => {
   const user = req.user;
   console.log("asda" + user.role);
@@ -633,6 +641,7 @@ exports.getLoginUser = (req, res) => {
     },
   });
 };
+
 exports.changeUserRoles = (req, res) => {
   const condition = { _id: req.params.id };
   const role = parseInt(req.body.role);
@@ -804,6 +813,7 @@ exports.forgetPassword = async (req, res) => {
       });
     });
 };
+
 exports.changePassword = async (req, res) => {
   const user = req.user;
   const email = user.email;
@@ -856,6 +866,7 @@ exports.changePassword = async (req, res) => {
       });
     });
 };
+
 // exports.verifyOtp = async (req, res) => {
 //   const email = req.body.email;
 //   const otp = req.body.otp;

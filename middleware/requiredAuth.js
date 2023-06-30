@@ -21,10 +21,10 @@ exports.requiredAuth =
           .status(401)
           .send({ status: "401", message: "Unauthorized!" + err });
       }
-      console.log(decoded);
-      // if (role.length != 0 && !role.includes(decoded.role)) {
-      //   return res.status(403).send({ error: 1, msg: "access denied." });
-      // }
+      // console.log(decoded.organisation, "decoded");
+      if (role.length !== 0 && !role.includes(decoded.organisation.role)) {
+        return res.status(403).send({ error: 1, msg: "access denied." });
+      }
 
       // get user details using token
       const _id = decoded._id;
@@ -38,7 +38,12 @@ exports.requiredAuth =
       }
 
       // console.log(result);
-      req.user = result;
+      req.user = {};
+      req.user.id = result._id;
+      req.user.status = result.status;
+      req.user.email = result.email;
+      req.user.name = result.name;
+      req.user.organisation = decoded.organisation;
 
       next();
     });

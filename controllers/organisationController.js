@@ -87,10 +87,11 @@ exports.createOrganisation = async (req, res) => {
           {
             organisation: orgsExistOrNot._id,
             priority: 1,
+            role: "user",
           },
         ],
         status: "approved",
-        role: "user",
+        // role: "user",
       });
       user.save((err, user) => {
         if (err) {
@@ -238,6 +239,7 @@ exports.createOrganisation = async (req, res) => {
   // });
 };
 
+// After register user will get a link on the mail. Using the link and "createOrganisationfromEmail" api to create an organization and add the user as an admin to the organization
 exports.createOrganisationfromEmail = async (req, res) => {
   const { token, organisation_name } = req.body;
   if (token) {
@@ -268,10 +270,10 @@ exports.createOrganisationfromEmail = async (req, res) => {
       const user = new User({
         email,
         name,
-        role: "admin",
         organisation_list: [
           {
             organisation: orgs._id,
+            role: "admin",
             priority: 1,
           },
         ],
@@ -360,14 +362,19 @@ exports.checkSubDomain = (req, res) => {
 
 exports.sendInviteFromOrganisation = async (req, res) => {
   const user = req.user;
-  console.log("req.user = " + req.user);
+  // console.log("user = " + user);
 
   const { email } = req.body;
 
-  const organisation = await Organisation.findOne({ _id: user.organisation });
   try {
+    const organisation = await Organisation.findOne({
+      _id: user.organisation.organisation,
+    });
+
+    // console.log("organisation", organisation);
+
     jwt.sign(
-      { _id: organisation._id, email },
+      { organisationId: organisation._id, email },
       process.env.INVITE_KEY,
       {
         expiresIn: "1d",
@@ -375,7 +382,7 @@ exports.sendInviteFromOrganisation = async (req, res) => {
       (err, emailToken) => {
         if (err) {
           return res.status(400).send({
-            status: "500",
+            status: "400",
             message: "Unable to signup. Try again later",
             err,
           });
@@ -395,7 +402,7 @@ exports.sendInviteFromOrganisation = async (req, res) => {
     );
   } catch (err) {
     console.log(err);
-    return res.status(400).send({
+    return res.status(500).send({
       status: "500",
       message: "Unable to send invitation. Try again later",
       err,
@@ -475,6 +482,108 @@ exports.sendInviteFromCSV = async (req, res) => {
         message: "Unable to send invites",
       });
     });
+};
+
+exports.verifyEmailInvite = async (req, res) => {
+  const { email, name } = req.body;
+  let blankFields = [];
+  try {
+    if (!email || email === "" || typeof email !== "string") {
+      blankFields.push("Email");
+    }
+    if (!name || name === "" || typeof name !== "string") {
+      blankFields.push("Name");
+    }
+    if (
+      !req.headers.authorization ||
+      !req.headers.authorization.startsWith("Bearer") ||
+      !req.headers.authorization.split(" ")[1]
+    ) {
+      blankFields.push("Token");
+    }
+    if (blankFields.length > 0) {
+      return res.status(400).send({
+        status: "400",
+        message: `${blankFields} is required`,
+      });
+    }
+
+    jwt.verify(
+      req.headers.authorization.split(" ")[1],
+      process.env.INVITE_KEY,
+      async (err, decoded) => {
+        if (err) {
+          return res
+            .status(400)
+            .send({ status: "400", message: "Invalid Token" });
+        }
+
+        const findUser = await User.findOne({ email: req.body.email });
+        if (findUser) {
+          let existOrNot = false;
+          for (const value of findUser.organisation_list) {
+            // console.log("value", value);
+            if (value.organisation == decoded.organisationId) {
+              existOrNot = true;
+              break;
+            }
+          }
+
+          if (existOrNot) {
+            return res.status(400).send({
+              status: "400",
+              message: "You are already exist on the organization",
+            });
+          } else {
+            await User.updateOne(
+              { _id: findUser._id },
+              {
+                $push: {
+                  organisation_list: {
+                    organisation: decoded.organisationId,
+                    role: "user",
+                    priority: 1,
+                  },
+                },
+              }
+            );
+            // console.log("Update Organization List");
+
+            return res.status(201).send({
+              status: "201",
+              message: "Successfully added User the to Organisation",
+            });
+          }
+        } else {
+          const user = new User({
+            email,
+            name,
+            organisation_list: [
+              {
+                organisation: decoded.organisationId,
+                role: "user",
+                priority: 1,
+              },
+            ],
+          });
+          user.save();
+          // console.log("insert user");
+
+          return res.status(201).send({
+            status: "201",
+            message: "Successfully added the User to Organisation",
+          });
+        }
+      }
+    );
+  } catch (err) {
+    console.log(err);
+    return res.status(500).send({
+      status: "500",
+      message: "Unable to add the User to Organisation",
+      err,
+    });
+  }
 };
 
 // let final_arr = [],

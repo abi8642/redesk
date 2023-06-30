@@ -39,11 +39,11 @@ const userSchema = new mongoose.Schema(
       // required: true,
     },
     salt: String,
-    role: {
-      type: String,
-      default: "user",
-      enum: ["user", "admin", "team_leader", "client", "observer", "subadmin"],
-    },
+    // role: {
+    //   type: String,
+    //   default: "user",
+    //   enum: ["user", "admin", "team_leader", "client", "observer", "subadmin"],
+    // },
     status: {
       type: String,
       default: "approved",
@@ -58,6 +58,18 @@ const userSchema = new mongoose.Schema(
         organisation: {
           type: mongoose.Schema.Types.ObjectId,
           ref: "Organisation",
+        },
+        role: {
+          type: String,
+          default: "user",
+          enum: [
+            "user",
+            "admin",
+            "team_leader",
+            "client",
+            "observer",
+            "subadmin",
+          ],
         },
       },
     ],

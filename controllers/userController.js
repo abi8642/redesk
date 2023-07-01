@@ -37,6 +37,8 @@ exports.verifyOtp = async (req, res) => {
     "organisation_list.organisation"
   );
 
+  // console.log("user: " + user);
+
   if (!user) {
     return res.status(400).send({ status: "400", message: "Email not found" });
   }
@@ -47,11 +49,11 @@ exports.verifyOtp = async (req, res) => {
   // user.forEach((u) => {
   //   orgs.push(u.organisation_list);
   // });
+
   orgs.push(...user.organisation_list);
   // if one then jwt token
 
   if (orgs.length == 1) {
-    // console.log("orgs", orgs);
     jwt.sign(
       { _id: user._id, email: user.email, organisation: orgs[0] },
       process.env.SECRET,
@@ -72,7 +74,7 @@ exports.verifyOtp = async (req, res) => {
           token: "Bearer " + token,
           user: {
             _id: user._id,
-            role: user.role,
+            organisation: orgs[0],
             name: user.name,
             email: user.email,
             token: `Bearer ${token}`,
@@ -103,10 +105,86 @@ exports.verifyOtp = async (req, res) => {
         });
       }
     );
+  }
+};
 
-    // return res
-    //   .status(200)
-    //   .send({ status: "200", message: "OTP verified", data: orgs });
+exports.selectOrganization = async (req, res) => {
+  const { organization } = req.body;
+  let blankFields = [];
+  try {
+    if (!organization || typeof organization !== "object") {
+      blankFields.push("Organization");
+    }
+    if (
+      !req.headers.authorization ||
+      !req.headers.authorization.startsWith("Bearer") ||
+      !req.headers.authorization.split(" ")[1]
+    ) {
+      blankFields.push("Authorization Token Required");
+    }
+
+    if (blankFields.length > 0) {
+      return res
+        .status(400)
+        .send({ status: "400", message: `${blankFields} is required` });
+    }
+
+    jwt.verify(
+      req.headers.authorization.split(" ")[1],
+      process.env.ACCOUNT_ACTIVATION,
+      async (err, decoded) => {
+        if (err) {
+          return res
+            .status(400)
+            .send({ status: "400", message: "Token Not Valid" });
+        }
+
+        const user = await User.findOne({ email: decoded.email });
+
+        if (!user) {
+          return res
+            .status(400)
+            .send({ status: "400", message: "Email not Exist" });
+        }
+
+        organization.organisation = organization.organisation._id;
+        // console.log("organization", organization);
+
+        jwt.sign(
+          { _id: user._id, email: user.email, organisation: organization },
+          process.env.SECRET,
+          { expiresIn: "1d" },
+          async (err, token) => {
+            if (err) {
+              return res.status(400).send({ status: "400", message: err });
+            }
+
+            //regenerate otp
+            const otp = Math.floor(100000 + Math.random() * 900000);
+            // console.log(otp);
+            await User.updateMany({ email: user.email }, { otp });
+
+            return res.status(200).send({
+              status: "200",
+              message: "Otp verified and Token generated",
+              token: "Bearer " + token,
+              user: {
+                _id: user._id,
+                organization: organization,
+                name: user.name,
+                email: user.email,
+                token: `Bearer ${token}`,
+              },
+            });
+          }
+        );
+      }
+    );
+  } catch (err) {
+    console.log(err);
+    return res
+      .status(500)
+      .send({ status: "500", message: "Unable to Register user" });
   }
 };
 

@@ -74,7 +74,7 @@ exports.verifyOtp = async (req, res) => {
           token: "Bearer " + token,
           user: {
             _id: user._id,
-            role: orgs[0].role,
+            organisation: orgs[0],
             name: user.name,
             email: user.email,
             token: `Bearer ${token}`,
@@ -170,7 +170,7 @@ exports.selectOrganization = async (req, res) => {
               token: "Bearer " + token,
               user: {
                 _id: user._id,
-                role: organization.role,
+                organization: organization,
                 name: user.name,
                 email: user.email,
                 token: `Bearer ${token}`,

@@ -112,7 +112,7 @@ exports.selectOrganization = async (req, res) => {
   const { organization } = req.body;
   let blankFields = [];
   try {
-    if (!organization || typeof organization !== "object") {
+    if (!organization || typeof organization !== "string") {
       blankFields.push("Organization");
     }
     if (
@@ -120,7 +120,7 @@ exports.selectOrganization = async (req, res) => {
       !req.headers.authorization.startsWith("Bearer") ||
       !req.headers.authorization.split(" ")[1]
     ) {
-      blankFields.push("Authorization Token Required");
+      blankFields.push("Authorization Token");
     }
 
     if (blankFields.length > 0) {
@@ -147,11 +147,15 @@ exports.selectOrganization = async (req, res) => {
             .send({ status: "400", message: "Email not Exist" });
         }
 
-        organization.organisation = organization.organisation._id;
-        // console.log("organization", organization);
+        let orgs = [];
+
+        for (let org of user.organisation_list) {
+          if (organization == org._id) orgs.push(org);
+        }
+        // console.log("orgs", orgs);
 
         jwt.sign(
-          { _id: user._id, email: user.email, organisation: organization },
+          { _id: user._id, email: user.email, organisation: orgs[0] },
           process.env.SECRET,
           { expiresIn: "1d" },
           async (err, token) => {
@@ -170,7 +174,7 @@ exports.selectOrganization = async (req, res) => {
               token: "Bearer " + token,
               user: {
                 _id: user._id,
-                organization: organization,
+                organization: orgs[0],
                 name: user.name,
                 email: user.email,
                 token: `Bearer ${token}`,

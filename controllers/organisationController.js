@@ -288,61 +288,61 @@ exports.createOrganisationfromEmail = async (req, res) => {
   }
 };
 
-// *************
-exports.verifyOrganisation = (req, res) => {
-  const { token } = req.query;
-  if (token) {
-    jwt.verify(token, process.env.ACCOUNT_ACTIVATION, (err, decoded) => {
-      if (err) {
-        return res.status(401).send({
-          status: "401",
-          message: "Expired link. Signup again",
-        });
-      }
+// **********************************************************
+// exports.verifyOrganisation = (req, res) => {
+//   const { token } = req.query;
+//   if (token) {
+//     jwt.verify(token, process.env.ACCOUNT_ACTIVATION, (err, decoded) => {
+//       if (err) {
+//         return res.status(401).send({
+//           status: "401",
+//           message: "Expired link. Signup again",
+//         });
+//       }
 
-      // console.log("decoded", decoded);
-      const { _id, organisation } = decoded;
-      User.findOne({ _id, organisation }, async (err, user) => {
-        if (err || !user) {
-          return res.status(401).send({
-            status: "401",
-            message: "User with this email does not exist",
-          });
-        }
-        if (user.status === "approved") {
-          return res.status(401).json({
-            status: "401",
-            message: "User already verified",
-          });
-        }
-        user.status = "approved";
-        await Organisation.findOneAndUpdate(
-          { _id: user.organisation },
-          { status: "approved" }
-        );
-        user.save((err, user) => {
-          if (err) {
-            return res.status(401).json({
-              status: "401",
-              message: "Something went wrong. Try again later",
-            });
-          }
-          return res.status(200).json({
-            status: "200",
-            message: "User verified successfully",
-            data: user.email,
-          });
-        });
-      });
-    });
-  } else {
-    return res.status(401).send({
-      status: "401",
-      message: "Something went wrong. Try again later",
-    });
-  }
-};
-// *************
+//       // console.log("decoded", decoded);
+//       const { _id, organisation } = decoded;
+//       User.findOne({ _id, organisation }, async (err, user) => {
+//         if (err || !user) {
+//           return res.status(401).send({
+//             status: "401",
+//             message: "User with this email does not exist",
+//           });
+//         }
+//         if (user.status === "approved") {
+//           return res.status(401).json({
+//             status: "401",
+//             message: "User already verified",
+//           });
+//         }
+//         user.status = "approved";
+//         await Organisation.findOneAndUpdate(
+//           { _id: user.organisation },
+//           { status: "approved" }
+//         );
+//         user.save((err, user) => {
+//           if (err) {
+//             return res.status(401).json({
+//               status: "401",
+//               message: "Something went wrong. Try again later",
+//             });
+//           }
+//           return res.status(200).json({
+//             status: "200",
+//             message: "User verified successfully",
+//             data: user.email,
+//           });
+//         });
+//       });
+//     });
+//   } else {
+//     return res.status(401).send({
+//       status: "401",
+//       message: "Something went wrong. Try again later",
+//     });
+//   }
+// };
+// **********************************************************
 
 exports.checkSubDomain = (req, res) => {
   const { sub_domain } = req.body;

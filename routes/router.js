@@ -29,6 +29,7 @@ const {
   createSubAdmin,
   getSubadmin,
   verifyOtp,
+  selectOrganization,
   changePassword,
   allUserFromOrgs,
   sendOtp,
@@ -112,7 +113,7 @@ const {
 router.post("/createOrganisation", createOrganisation);
 router.post("/createOrganisationfromEmail", createOrganisationfromEmail);
 router.post("/checkSubDomain", checkSubDomain);
-router.get("/verifyOrganisation", verifyOrganisation);
+// router.get("/verifyOrganisation", verifyOrganisation);
 router.get("/getOrganisationList", getOrganisationList);
 router.post(
   "/sendInvite",
@@ -135,6 +136,7 @@ router.get("/categoryList", requiredAuth(), allCategories);
 
 router.post("/sendOtp", sendOtp);
 router.post("/verifyOtp", verifyOtp);
+router.post("/selectOrganization", selectOrganization);
 router.post("/requestToken", requestToken);
 
 //user create

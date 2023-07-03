@@ -16,11 +16,7 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(cors());
 
-// app.use(
-//   fileUpload({
-//     useTempFiles: true,
-//   })
-// );
+app.use(fileUpload());
 
 app.use("/image", express.static(path.join(__dirname, "/files")));
 app.use(express.static("public"));

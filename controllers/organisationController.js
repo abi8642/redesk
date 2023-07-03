@@ -360,56 +360,56 @@ exports.checkSubDomain = (req, res) => {
   });
 };
 
+// exports.sendInviteFromOrganisation = async (req, res) => {
+//   const user = req.user;
+//   // console.log("user = " + user);
+
+//   const { email } = req.body;
+
+//   try {
+//     const organisation = await Organisation.findOne({
+//       _id: user.organisation.organisation,
+//     });
+
+//     // console.log("organisation", organisation);
+
+//     jwt.sign(
+//       { organisationId: organisation._id, email },
+//       process.env.INVITE_KEY,
+//       {
+//         expiresIn: "1d",
+//       },
+//       (err, emailToken) => {
+//         if (err) {
+//           return res.status(400).send({
+//             status: "400",
+//             message: "Unable to signup. Try again later",
+//           });
+//         }
+//         transporter.sendMail({
+//           from: "invite@apptimates.com",
+//           to: email,
+//           subject: "Please set up your account for Redesk",
+//           text: `Please click on the link to set up your account for ${organisation.organisation_name} at Redesk http://dev.redesk.in/signup?token=${emailToken}&email=${email}`,
+//         });
+
+//         return res.status(201).send({
+//           status: "201",
+//           message: "Successfully sent invitation",
+//         });
+//       }
+//     );
+//   } catch (err) {
+//     console.log(err);
+//     return res.status(500).send({
+//       status: "500",
+//       message: "Unable to send invitation. Try again later",
+//       err,
+//     });
+//   }
+// };
+
 exports.sendInviteFromOrganisation = async (req, res) => {
-  const user = req.user;
-  // console.log("user = " + user);
-
-  const { email } = req.body;
-
-  try {
-    const organisation = await Organisation.findOne({
-      _id: user.organisation.organisation,
-    });
-
-    // console.log("organisation", organisation);
-
-    jwt.sign(
-      { organisationId: organisation._id, email },
-      process.env.INVITE_KEY,
-      {
-        expiresIn: "1d",
-      },
-      (err, emailToken) => {
-        if (err) {
-          return res.status(400).send({
-            status: "400",
-            message: "Unable to signup. Try again later",
-          });
-        }
-        transporter.sendMail({
-          from: "invite@apptimates.com",
-          to: email,
-          subject: "Please set up your account for Redesk",
-          text: `Please click on the link to set up your account for ${organisation.organisation_name} at Redesk http://dev.redesk.in/signup?token=${emailToken}&email=${email}`,
-        });
-
-        return res.status(201).send({
-          status: "201",
-          message: "Successfully sent invitation",
-        });
-      }
-    );
-  } catch (err) {
-    console.log(err);
-    return res.status(500).send({
-      status: "500",
-      message: "Unable to send invitation. Try again later",
-      err,
-    });
-  }
-};
-
-exports.sendInviteFromOrganisationWithRole = async (req, res) => {
   const user = req.user;
   const { email, role } = req.body;
   let blankFields = [];
@@ -417,8 +417,8 @@ exports.sendInviteFromOrganisationWithRole = async (req, res) => {
   if (!email || email === "" || typeof email !== "string") {
     blankFields.push("Email");
   }
-  if (!role || role === "" || typeof role !== "number") {
-    blankFields.push("Role");
+  if (!role || role === "") {
+    role = 6;
   }
   if (blankFields.length > 0) {
     return res.status(400).send({
@@ -426,10 +426,10 @@ exports.sendInviteFromOrganisationWithRole = async (req, res) => {
       message: `${blankFields} is required`,
     });
   }
-  if (role < 4 || role > 6) {
+  if (role < 2 || role > 6) {
     return res.status(400).send({
       status: "400",
-      message: `role must be between 1 and 6, inclusive`,
+      message: `role must be between 2 and 6, inclusive`,
     });
   }
 
@@ -439,7 +439,7 @@ exports.sendInviteFromOrganisationWithRole = async (req, res) => {
     });
 
     jwt.sign(
-      { organisationId: organisation._id, email, role: role },
+      { organisationId: organisation._id, email, role },
       process.env.INVITE_KEY,
       {
         expiresIn: "1d",
@@ -479,74 +479,199 @@ exports.sendInviteFromCSV = async (req, res) => {
 
   let file = req.files.file;
 
-  const workbook = xlsx.readFile(file.tempFilePath); // Step 2
-  let workbook_sheet = workbook.SheetNames; // Step 3
-  let workbook_response = xlsx.utils.sheet_to_json(
-    // Step 4
-    workbook.Sheets[workbook_sheet[0]]
-  );
-
-  let promises = [];
-
-  for (let i = 0; i < workbook_response.length; i++) {
-    const { email } = workbook_response[i];
-    if (!email) {
-      console.log("NO email found");
-      continue;
-    }
-    const organisation = await Organisation.findOne({ _id: user.organisation });
-    jwt.sign(
-      { _id: organisation._id, email },
-      process.env.INVITE_KEY,
-      {
-        expiresIn: "1d",
-      },
-      (err, emailToken) => {
+  if (file) {
+    file.mv(
+      "D:/rechargekit/redesk-v2-api/files/" + file.name,
+      async function (err) {
         if (err) {
-          return res.status(400).send({
-            status: "500",
-            message: "Unable to signup. Try again later",
-            err,
-          });
-        }
-        console.log(email);
-        promises.push(
-          new Promise((resolve, reject) => {
-            transporter.sendMail(
+          res.send(err);
+        } else {
+          const workbook = xlsx.readFile(
+            "D:/rechargekit/redesk-v2-api/files/" + file.name
+          ); // Step 2
+          let workbook_sheet = workbook.SheetNames; // Step 3
+          let workbook_response = xlsx.utils.sheet_to_json(
+            // Step 4
+            workbook.Sheets[workbook_sheet[0]]
+          );
+          let promises = [];
+
+          for (let i = 0; i < workbook_response.length; i++) {
+            let { email, role } = workbook_response[i];
+            if (!email) {
+              console.log("NO email found");
+              continue;
+            }
+            if (!role) {
+              role = 6;
+            }
+            const organisation = await Organisation.findOne({
+              _id: user.organisation.organisation,
+            });
+            jwt.sign(
+              { _id: organisation._id, email, role },
+              process.env.INVITE_KEY,
               {
-                from: "invite@apptimates.com",
-                to: email,
-                subject: "Please set up your account for Redesk",
-                text: `Please click on the link to set up your account for ${organisation.organisation_name} at Redesk http://redesk.in/signup?token=${emailToken}&email=${email}`,
+                expiresIn: "1d",
               },
-              (err, info) => {
+              (err, emailToken) => {
                 if (err) {
-                  reject(err);
-                } else {
-                  resolve(info);
+                  return res.status(400).send({
+                    status: "500",
+                    message: "Unable to signup. Try again later",
+                    err,
+                  });
                 }
+
+                promises.push(
+                  new Promise((resolve, reject) => {
+                    transporter.sendMail(
+                      {
+                        from: "invite@apptimates.com",
+                        to: email,
+                        subject: "Please set up your account for Redesk",
+                        text: `Please click on the link to set up your account for ${organisation.organisation_name} at Redesk http://dev.redesk.in/signup?token=${emailToken}&email=${email}`,
+                      },
+                      (err, info) => {
+                        if (err) {
+                          reject(err);
+                        } else {
+                          resolve(info);
+                        }
+                      }
+                    );
+                  })
+                );
               }
             );
-          })
-        );
+          }
+          Promise.all(promises)
+            .then((data) => {
+              return res.status(201).send({
+                status: "201",
+                message: "Successfully sent invites",
+              });
+            })
+            .catch((err) => {
+              return res.status(400).send({
+                status: "400",
+                message: "Unable to send invites",
+              });
+            });
+        }
       }
     );
   }
 
-  Promise.all(promises)
-    .then((data) => {
-      return res.status(201).send({
-        status: "201",
-        message: "Successfully sent invites",
-      });
-    })
-    .catch((err) => {
-      return res.status(400).send({
-        status: "400",
-        message: "Unable to send invites",
-      });
-    });
+  // const workbook = xlsx.readFile(file.data); // Step 2
+  // let workbook_sheet = workbook.SheetNames; // Step 3
+  // let workbook_response = xlsx.utils.sheet_to_json(
+  //   // Step 4
+  //   workbook.Sheets[workbook_sheet[0]]
+  // );
 };
+
+// exports.verifyInvitation = async (req, res) => {
+//   const { email, name } = req.body;
+//   let blankFields = [];
+//   try {
+//     if (!email || email === "" || typeof email !== "string") {
+//       blankFields.push("Email");
+//     }
+//     if (!name || name === "" || typeof name !== "string") {
+//       blankFields.push("Name");
+//     }
+//     if (
+//       !req.headers.authorization ||
+//       !req.headers.authorization.startsWith("Bearer") ||
+//       !req.headers.authorization.split(" ")[1]
+//     ) {
+//       blankFields.push("Token");
+//     }
+//     if (blankFields.length > 0) {
+//       return res.status(400).send({
+//         status: "400",
+//         message: `${blankFields} is required`,
+//       });
+//     }
+
+//     jwt.verify(
+//       req.headers.authorization.split(" ")[1],
+//       process.env.INVITE_KEY,
+//       async (err, decoded) => {
+//         if (err) {
+//           return res
+//             .status(400)
+//             .send({ status: "400", message: "Invalid Token" });
+//         }
+
+//         const findUser = await User.findOne({ email: req.body.email });
+//         if (findUser) {
+//           let existOrNot = false;
+//           for (const value of findUser.organisation_list) {
+//             // console.log("value", value);
+//             if (value.organisation == decoded.organisationId) {
+//               existOrNot = true;
+//               break;
+//             }
+//           }
+
+//           if (existOrNot) {
+//             return res.status(400).send({
+//               status: "400",
+//               message: "You are already exist on the organization",
+//             });
+//           } else {
+//             await User.updateOne(
+//               { _id: findUser._id },
+//               {
+//                 $push: {
+//                   organisation_list: {
+//                     organisation: decoded.organisationId,
+//                     role: "user",
+//                     priority: 1,
+//                   },
+//                 },
+//               }
+//             );
+//             // console.log("Update Organization List");
+
+//             return res.status(201).send({
+//               status: "201",
+//               message: "Successfully added User the to Organisation",
+//             });
+//           }
+//         } else {
+//           const user = new User({
+//             email,
+//             name,
+//             organisation_list: [
+//               {
+//                 organisation: decoded.organisationId,
+//                 role: "user",
+//                 priority: 1,
+//               },
+//             ],
+//           });
+//           user.save();
+//           // console.log("insert user");
+
+//           return res.status(201).send({
+//             status: "201",
+//             message: "Successfully added the User to Organisation",
+//           });
+//         }
+//       }
+//     );
+//   } catch (err) {
+//     console.log(err);
+//     return res.status(500).send({
+//       status: "500",
+//       message: "Unable to add the User to Organisation",
+//       err,
+//     });
+//   }
+// };
 
 exports.verifyInvitation = async (req, res) => {
   const { email, name } = req.body;
@@ -583,113 +708,11 @@ exports.verifyInvitation = async (req, res) => {
         }
 
         const findUser = await User.findOne({ email: req.body.email });
+
         if (findUser) {
           let existOrNot = false;
           for (const value of findUser.organisation_list) {
-            // console.log("value", value);
-            if (value.organisation == decoded.organisationId) {
-              existOrNot = true;
-              break;
-            }
-          }
-
-          if (existOrNot) {
-            return res.status(400).send({
-              status: "400",
-              message: "You are already exist on the organization",
-            });
-          } else {
-            await User.updateOne(
-              { _id: findUser._id },
-              {
-                $push: {
-                  organisation_list: {
-                    organisation: decoded.organisationId,
-                    role: "user",
-                    priority: 1,
-                  },
-                },
-              }
-            );
-            // console.log("Update Organization List");
-
-            return res.status(201).send({
-              status: "201",
-              message: "Successfully added User the to Organisation",
-            });
-          }
-        } else {
-          const user = new User({
-            email,
-            name,
-            organisation_list: [
-              {
-                organisation: decoded.organisationId,
-                role: "user",
-                priority: 1,
-              },
-            ],
-          });
-          user.save();
-          // console.log("insert user");
-
-          return res.status(201).send({
-            status: "201",
-            message: "Successfully added the User to Organisation",
-          });
-        }
-      }
-    );
-  } catch (err) {
-    console.log(err);
-    return res.status(500).send({
-      status: "500",
-      message: "Unable to add the User to Organisation",
-      err,
-    });
-  }
-};
-
-exports.verifyInvitationWithRole = async (req, res) => {
-  const { email, name } = req.body;
-  let blankFields = [];
-  try {
-    if (!email || email === "" || typeof email !== "string") {
-      blankFields.push("Email");
-    }
-    if (!name || name === "" || typeof name !== "string") {
-      blankFields.push("Name");
-    }
-    if (
-      !req.headers.authorization ||
-      !req.headers.authorization.startsWith("Bearer") ||
-      !req.headers.authorization.split(" ")[1]
-    ) {
-      blankFields.push("Token");
-    }
-    if (blankFields.length > 0) {
-      return res.status(400).send({
-        status: "400",
-        message: `${blankFields} is required`,
-      });
-    }
-
-    jwt.verify(
-      req.headers.authorization.split(" ")[1],
-      process.env.INVITE_KEY,
-      async (err, decoded) => {
-        if (err) {
-          return res
-            .status(400)
-            .send({ status: "400", message: "Invalid Token" });
-        }
-
-        const findUser = await User.findOne({ email: req.body.email });
-        if (findUser) {
-          let existOrNot = false;
-          for (const value of findUser.organisation_list) {
-            // console.log("value", value);
-            if (value.organisation == decoded.organisationId) {
+            if (value.organisation == decoded._id) {
               existOrNot = true;
               break;
             }

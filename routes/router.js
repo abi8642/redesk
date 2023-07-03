@@ -82,10 +82,12 @@ const {
   getDashboardDetails,
   sendInviteFromCSV,
   verifyEmailInvite,
+  verifyInvitation,
   createCategory,
   editCategory,
   allCategories,
   createOrganisationfromEmail,
+  sendInviteFromOrganisationWithRole,
 } = require("../controllers/organisationController");
 const {
   allMessages,
@@ -126,6 +128,7 @@ router.post(
   sendInviteFromCSV
 );
 router.post("/verifyEmailInvite", verifyEmailInvite);
+router.post("/verifyInvitation", verifyInvitation);
 router.get("/getdashboarddetails", requiredAuth(), getDashboardDetails);
 
 router.post("/createCategory", requiredAuth(), createCategory);

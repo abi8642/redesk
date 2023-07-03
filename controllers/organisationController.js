@@ -384,7 +384,6 @@ exports.sendInviteFromOrganisation = async (req, res) => {
           return res.status(400).send({
             status: "400",
             message: "Unable to signup. Try again later",
-            err,
           });
         }
         transporter.sendMail({
@@ -562,6 +561,118 @@ exports.verifyEmailInvite = async (req, res) => {
               {
                 organisation: decoded.organisationId,
                 role: "user",
+                priority: 1,
+              },
+            ],
+          });
+          user.save();
+          // console.log("insert user");
+
+          return res.status(201).send({
+            status: "201",
+            message: "Successfully added the User to Organisation",
+          });
+        }
+      }
+    );
+  } catch (err) {
+    console.log(err);
+    return res.status(500).send({
+      status: "500",
+      message: "Unable to add the User to Organisation",
+      err,
+    });
+  }
+};
+
+exports.verifyInvitation = async (req, res) => {
+  const { email, name } = req.body;
+  const role = parseInt(req.body.role);
+  let blankFields = [];
+  try {
+    if (!email || email === "" || typeof email !== "string") {
+      blankFields.push("Email");
+    }
+    if (!name || name === "" || typeof name !== "string") {
+      blankFields.push("Name");
+    }
+    if (!role || role === "" || typeof role !== "number") {
+      blankFields.push("Role");
+    }
+    if (
+      !req.headers.authorization ||
+      !req.headers.authorization.startsWith("Bearer") ||
+      !req.headers.authorization.split(" ")[1]
+    ) {
+      blankFields.push("Token");
+    }
+    if (blankFields.length > 0) {
+      return res.status(400).send({
+        status: "400",
+        message: `${blankFields} is required`,
+      });
+    }
+    if (role < 4 || role > 6) {
+      return res.status(400).send({
+        status: "400",
+        message: `role must be between 1 and 6, inclusive`,
+      });
+    }
+
+    jwt.verify(
+      req.headers.authorization.split(" ")[1],
+      process.env.INVITE_KEY,
+      async (err, decoded) => {
+        if (err) {
+          return res
+            .status(400)
+            .send({ status: "400", message: "Invalid Token" });
+        }
+
+        const findUser = await User.findOne({ email: req.body.email });
+        if (findUser) {
+          let existOrNot = false;
+          for (const value of findUser.organisation_list) {
+            // console.log("value", value);
+            if (value.organisation == decoded.organisationId) {
+              existOrNot = true;
+              break;
+            }
+          }
+
+          if (existOrNot) {
+            return res.status(400).send({
+              status: "400",
+              message: "You are already exist on the organization",
+            });
+          } else {
+            await User.updateOne(
+              { _id: findUser._id },
+              {
+                $push: {
+                  organisation_list: {
+                    organisation: decoded.organisationId,
+                    role: config.user_role[role],
+                    priority: 1,
+                  },
+                },
+              }
+            );
+            // console.log("Update Organization List");
+
+            return res.status(201).send({
+              status: "201",
+              message: "Successfully added User the to Organisation",
+            });
+          }
+        } else {
+          const user = new User({
+            email,
+            name,
+            organisation_list: [
+              {
+                organisation: decoded.organisationId,
+                role: config.user_role[role],
                 priority: 1,
               },
             ],

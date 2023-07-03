@@ -19,7 +19,7 @@ exports.requiredAuth =
       if (err) {
         return res
           .status(401)
-          .send({ status: "401", message: "Unauthorized!" + err });
+          .send({ status: "401", message: "Unauthorized!" });
       }
       // console.log(decoded.organisation, "decoded");
       if (role.length !== 0 && !role.includes(decoded.organisation.role)) {

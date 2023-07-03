@@ -6,9 +6,12 @@ let config = {
   },
   //["user", "admin", "team_leader", "observer"],
   user_role: {
-    0: "user",
-    1: "team_leader",
-    2: "observer",
+    1: "admin",
+    2: "subadmin",
+    3: "team_leader",
+    4: "observer",
+    5: "client",
+    6: "user",
   },
   task_status: {
     1: "ACTIVE",
@@ -16,6 +19,7 @@ let config = {
     3: "QA",
     4: "Completed",
     5: "Backlogs",
+    6: "Confirmed",
   },
   project_status: {
     1: "ACTIVE",

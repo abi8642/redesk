@@ -532,45 +532,62 @@ exports.signout = (req, res) => {
   res.status(200).send({ status: "200", message: "User signout successful" });
 };
 
+// high priority
 exports.getUser = (req, res) => {
   const user = req.user;
   // console.log("asda" + req.io);
 
   // if (user.role === "admin") {
-  if (true) {
-    //not include role admin
-    User.find(
-      {
-        role: { $nin: ["admin", "observer", "client", "subadmin"] },
-        organisation: user.organisation,
-        // status: "approved",
-      },
-      async (err, docs) => {
-        // User.find((err, docs) => {
-        if (!err) {
-          // req.io.emit("message", docs);
-          // req.io.to("room2").emit("message", docs);
-          const tasks = await task.find({
-            task_assignee: { $in: docs.map((doc) => doc._id) },
-            status: { $in: ["pending", "in_progress"] },
-            organisation: user.organisation,
-          });
-
-          res.status(200).send({ status: "200", message: "User List", docs });
-        } else {
-          return res.status(400).send({
-            status: "400",
-            message: "Failed to retrieve the User List: " + err,
-          });
+  // if (true) {
+  //not include role admin
+  let userList = [];
+  User.find(
+    {
+      "organisation_list.organisation": user.organisation.organisation,
+    },
+    async (err, docs) => {
+      // User.find((err, docs) => {
+      console.log("docs", docs);
+      if (!err) {
+        // req.io.emit("message", docs);
+        // req.io.to("room2").emit("message", docs);
+        let tasks = [];
+        for (let doc of docs) {
+          task
+            .find({
+              task_assignee: { $in: doc._id },
+              organisation: user.organisation.organisation,
+            })
+            .populate("task_assignee", "pic status _id email name")
+            .exec((err, results) => {
+              if (err) {
+                console.log(err);
+              }
+              for (let taskObj of results) {
+                tasks.push(taskObj);
+                // console.log("taskObj", tasks);
+              }
+            });
         }
+        tasks.map((t) => {
+          console.log("task", t);
+        });
+
+        res.status(200).send({ status: "200", message: "User List", docs });
+      } else {
+        return res.status(400).send({
+          status: "400",
+          message: "Failed to retrieve the User List: " + err,
+        });
       }
-    );
-  } else {
-    res.status(400).send({
-      status: 400,
-      message: "Only admin can access this",
-    });
-  }
+    }
+  );
+  // } else {
+  //   res.status(400).send({
+  //     status: 400,
+  //     message: "Only admin can access this",
+  //   });
+  // }
 };
 
 exports.allUserFromOrgs = (req, res) => {
@@ -578,31 +595,40 @@ exports.allUserFromOrgs = (req, res) => {
   // console.log("asda" + req.io);
 
   // if (user.role === "admin") {
-  if (true) {
-    //not include role admin
+  // if (true) {
+  //not include role admin
+  try {
     User.find(
       {
-        organisation: user.organisation,
+        "organisation_list.organisation": user.organisation.organisation,
+
         // status: "approved",
       },
-      (err, docs) => {
-        // User.find((err, docs) => {
-        if (!err) {
-          // req.io.emit("message", docs);
-          // req.io.to("room2").emit("message", docs);
-          res.status(200).send({ status: "200", message: "User List", docs });
-        } else {
-          return res.status(400).send({
-            status: "400",
-            message: "Failed to retrieve the User List: " + err,
-          });
-        }
+      { _id: 1, email: 1, name: 1, status: 1, pic: 1 }
+    ).exec((err, docs) => {
+      if (!err) {
+        // req.io.emit("message", docs);
+        // req.io.to("room2").emit("message", docs);
+        return res
+          .status(200)
+          .send({ status: "200", message: "User List", docs });
+      } else {
+        return res.status(400).send({
+          status: "400",
+          message: "Failed to retrieve the User List: " + err,
+        });
       }
-    );
-  } else {
-    res.status(400).send({
-      status: 400,
-      message: "Only admin can access this",
+    });
+    // } else {
+    //   res.status(400).send({
+    //     status: 400,
+    //     message: "Only admin can access this",
+    //   });
+    // }
+  } catch (err) {
+    return res.status(500).send({
+      status: 500,
+      message: "Failed to get user list",
     });
   }
 };
@@ -1005,6 +1031,7 @@ exports.allUsers = async (req, res) => {
   const users = await User.find(keyword).find({ _id: { $ne: req.user._id } });
   res.send(users);
 };
+
 exports.createObserver = async (req, res) => {
   const user = req.user;
   if (user.role === "admin" || user.role === "subadmin") {
@@ -1049,6 +1076,7 @@ exports.createObserver = async (req, res) => {
     });
   }
 };
+
 exports.getObserver = async (req, res) => {
   const user = req.user;
 
@@ -1072,67 +1100,87 @@ exports.getObserver = async (req, res) => {
 
 exports.createClient = async (req, res) => {
   const user = req.user;
-  if (user.role === "admin" || user.role === "subadmin") {
-    // const { name, email, password, role, pic, status } = req.body;
+  // if (user.role === "admin" || user.role === "subadmin") {
+  // const { name, email, password, role, pic, status } = req.body;
 
-    // const hashedPassword = await bcrypt.hash(password, 12);
+  // const hashedPassword = await bcrypt.hash(password, 12);
 
-    req.body.role = "client";
-    req.body.status = "approved";
-    req.body.organisation = user.organisation;
-    let userExist = await User.find({
-      email: req.body.email,
-      organisation: user.organisation,
-    });
-    if (userExist.length > 0) {
-      return res.status(400).send({
-        status: "400",
-        message: "User already exist",
-      });
-    }
+  req.body.role = "client";
+  req.body.status = "approved";
+  req.body.organisation = user.organisation;
 
-    try {
-      const newUser = new User(req.body);
-      const result = await newUser.save();
-      res.status(200).send({
-        status: "200",
-        message: "Client created successfully",
-        result,
-      });
-    } catch (err) {
-      res.status(400).send({
-        status: "400",
-        message: "Something went wrong",
-        err,
-      });
-    }
-  } else {
-    res.status(400).send({
-      status: 400,
-      message: "Only admin can access this",
+  let userExist = await User.findOne({
+    email: req.body.email,
+  });
+
+  console.log("userExist", userExist[0].organisation_list);
+  if (userExist.length > 0) {
+    return res.status(400).send({
+      status: "400",
+      message: `User already exist`,
     });
   }
+
+  try {
+    const newUser = new User(req.body);
+    const result = await newUser.save();
+    res.status(200).send({
+      status: "200",
+      message: "Client created successfully",
+      result,
+    });
+  } catch (err) {
+    res.status(400).send({
+      status: "400",
+      message: "Something went wrong",
+      err,
+    });
+  }
+  // } else {
+  //   res.status(400).send({
+  //     status: 400,
+  //     message: "Only admin can access this",
+  //   });
+  // }
 };
 
 exports.getClient = async (req, res) => {
   const user = req.user;
+  try {
+    const client = await User.find(
+      {
+        "organisation_list.organisation": user.organisation.organisation,
+        "organisation_list.role": "client",
+      },
+      {
+        _id: 1,
+        email: 1,
+        name: 1,
+        status: 1,
+        pic: 1,
+      }
+    );
 
-  const client = await User.find({
-    role: "client",
-    organisation: user.organisation,
-  });
-  if (!client) {
-    return res.status(400).send({
-      status: "400",
-      message: "Client not found",
+    console.log("client", client);
+    if (!client) {
+      return res.status(400).send({
+        status: "400",
+        message: "Client not found",
+      });
+    }
+
+    return res.status(200).send({
+      status: "200",
+      message: "Client fetched successfully",
+      client,
+    });
+  } catch (err) {
+    return res.status(500).send({
+      status: "500",
+      message: "Failed To Get Client",
+      client,
     });
   }
-
-  res.status(200).send({
-    status: "200",
-    message: "Client fetched successfully",
-    client,
-  });
 };
 
 exports.createSubAdmin = async (req, res) => {
@@ -1179,6 +1227,7 @@ exports.createSubAdmin = async (req, res) => {
     });
   }
 };
+
 exports.getSubadmin = async (req, res) => {
   const user = req.user;
 

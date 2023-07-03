@@ -56,45 +56,46 @@ exports.createTask = (req, res) => {
           String(taskNo).padStart(5, "0");
 
         payload.task_no = reference_id;
-        payload.organisation = user.organisation;
-        payload.created_by = user._id;
+        payload.organisation = user.organisation.organisation;
+        payload.created_by = user.id;
         TaskModel.create(payload)
           .then(async (task) => {
             if (task) {
-              payload.task_assignee.forEach((element) => {
-                Notification.create({
-                  notification: "New Task assigned",
-                  status: "UNREAD",
-                  send_by: user._id,
-                  send_to: element,
-                });
-              });
+              console.log("task", task);
+              // payload.task_assignee.forEach((element) => {
+              //   Notification.create({
+              //     notification: "New Task assigned",
+              //     status: "UNREAD",
+              //     send_by: user.id,
+              //     send_to: element,
+              //   });
+              // });
 
               // const tasks=TaskM
 
               //!NOTIFICATION FOR TASK CREATION
 
-              req.io
-                .to(`project:${req.body.project_id}`)
-                .emit("message", "New task created");
+              // req.io
+              //   .to(`project:${req.body.project_id}`)
+              //   .emit("message", "New task created");
 
-              const getProjectMembers = await ProjectModel.findOne({
-                _id: payload.project_id,
-                organisation: user.organisation,
-              })
-                .populate("project_leader project_assignee", "name pic")
-                .lean();
+              // const getProjectMembers = await ProjectModel.findOne({
+              //   _id: payload.project_id,
+              //   organisation: user.organisation,
+              // })
+              //   .populate("project_leader project_assignee", "name pic")
+              //   .lean();
 
-              let members = [];
-              members.push(...getProjectMembers.project_leader);
-              members.push(...getProjectMembers.project_assignee);
+              // let members = [];
+              // members.push(...getProjectMembers.project_leader);
+              // members.push(...getProjectMembers.project_assignee);
 
-              await notification.create({
-                title: "New Task Created",
-                message: "New Task assigned",
-                status: "UNREAD",
-                users: members,
-              });
+              // await notification.create({
+              //   title: "New Task Created",
+              //   message: "New Task assigned",
+              //   status: "UNREAD",
+              //   users: members,
+              // });
 
               //!NOTIFICATION FOR TASK CREATION END
 
@@ -106,7 +107,7 @@ exports.createTask = (req, res) => {
             }
           })
           .catch((err) => {
-            console.log(err);
+            console.log("err", err);
             return res.status(500).send({
               status: "500",
               message: "Unable to create task. Try again later",
@@ -120,21 +121,24 @@ exports.createTask = (req, res) => {
 //task list
 exports.getTask = async (req, res) => {
   const user = req.user;
+  // console.log("user: ", user);
   let query = {};
-  if (user.role == "admin" || user.role == "subadmin")
-    query = { organisation: user.organisation };
+  if (user.organisation.role == "admin" || user.organisation.role == "subadmin")
+    query = { organisation: user.organisation.organisation };
   else
     query = {
       $and: [
         {
-          $or: [{ task_assignee: user._id }, { created_by: user._id }],
+          $or: [{ task_assignee: user.id }, { created_by: user.id }],
         },
-        { organisation: user.organisation },
+        { organisation: user.organisation.organisation },
       ],
     };
 
-  if (user.role == "team_leader") {
-    const project = await ProjectModel.find({ project_leader: user._id });
+  // console.log("query", query);
+
+  if (user.organisation.role == "team_leader") {
+    const project = await ProjectModel.find({ project_leader: user.id });
 
     const project_id = project.map((item) => item._id);
 
@@ -145,10 +149,7 @@ exports.getTask = async (req, res) => {
   }
 
   TaskModel.find(query)
-    .populate(
-      "project_id project_assignee task_assignee",
-      "project_name name pic"
-    )
+    .populate("project_id task_assignee", "project_name name pic")
     .exec((err, docs) => {
       if (!err) {
         return res
@@ -186,6 +187,7 @@ exports.getTaskByProject = (req, res) => {
       }
     });
 };
+
 exports.getTaskArray = async (req, res) => {
   const user = req.user;
   const id = req.params.id;
@@ -392,6 +394,7 @@ exports.getTaskById = (req, res) => {
       }
     });
 };
+
 //task edit
 exports.editTask = (req, res) => {
   const user = req.user;
@@ -445,14 +448,47 @@ exports.closeTask = async (req, res) => {
 
 exports.changeTaskStatus = (req, res) => {
   const user = req.user;
-  const condition = { _id: req.params.id, organisation: user.organisation };
-  // console.log(req.body.status);
+  const condition = {
+    $and: [
+      { _id: req.params.id },
+      { organisation: user.organisation.organisation },
+    ],
+  };
   const status = parseInt(req.body.status);
 
-  if (status >= 6) {
+  if (status > 6 && status < 1) {
     return res
       .status(400)
       .send({ status: "400", message: "Failed to Update Task" });
+  }
+  if (status === 6) {
+    if (
+      user.organisation.role === "admin" ||
+      user.organisation.role === "team_lead" ||
+      user.organisation.role === "subadmin"
+    ) {
+      TaskModel.findOneAndUpdate(condition, { task_status: status })
+        .then((docs) => {
+          if (!docs) {
+            return res
+              .status(400)
+              .send({ status: "400", message: "Failed to Task Update" });
+          }
+          return res
+            .status(200)
+            .send({ status: "200", message: "Succesffully Updated Task" });
+        })
+        .catch((err) => {
+          return res
+            .status(400)
+            .send({ status: "400", message: "Something went wrong", err });
+        });
+    } else {
+      return res.status(400).send({
+        status: "400",
+        message: "Not Authorized to Change the status to CONFIRMED",
+      });
+    }
   }
   // let newRole = config.task_status[status];
   // console.log(newRole);
@@ -473,6 +509,7 @@ exports.changeTaskStatus = (req, res) => {
         .send({ status: "400", message: "Something went wrong", err });
     });
 };
+
 // task reminder route
 exports.reminderTask = async (req, res) => {
   const _id = req.params.id;

@@ -6,36 +6,35 @@ const notification = require("../models/notification");
 
 exports.createProject = async (req, res) => {
   const user = req.user;
-  req.body.createdBy = user._id;
-  req.body.organisation = user.organisation;
 
   const d = new Date();
   const month = d.getMonth() + 1;
   const year = d.getFullYear();
 
-  const projectCount = await projectModel.countDocuments({
-    createdAt: {
-      $gte: new Date(year, month - 1, 1), // Start of the month
-      $lt: new Date(year, month, 1), // Start of next month
-    },
-  });
-  // console.log(month);
-  // console.log(projectCount);
-  // return;
+  try {
+    const projectCount = await projectModel.countDocuments({
+      createdAt: {
+        $gte: new Date(year, month - 1, 1), // Start of the month
+        $lt: new Date(year, month, 1), // Start of next month
+      },
+    });
+    // console.log(d.getYear());
+    // console.log(projectCount);
+    // return;
 
-  const project_no = projectCount + 1;
-  const reference_id =
-    "RKIT" +
-    (d.getYear() - 100) +
-    ("0" + month).slice(-2) +
-    "" +
-    String(project_no).padStart(5, "0");
+    const project_no = projectCount + 1;
+    const reference_id =
+      "RKIT" +
+      (d.getYear() - 100) +
+      ("0" + month).slice(-2) +
+      "" +
+      String(project_no).padStart(5, "0");
 
-  console.log(reference_id);
-  req.body.project_no = reference_id;
-  req.body.created_by = user._id;
-  // if (user.role == "admin") {
-  if (true) {
+    // console.log("reference_id", reference_id);
+    req.body.project_no = reference_id;
+    req.body.created_by = user.id;
+    req.body.organisation = user.organisation.organisation;
+
     projectModel
       .create(req.body)
       .then((project) => {
@@ -46,14 +45,22 @@ exports.createProject = async (req, res) => {
         }
       })
       .catch((err) => {
+        console.log(err);
         return res
           .status(500)
           .send({ status: "500", message: "Unable to save user to DB", err });
       });
-  } else {
-    res.status(401).send({
-      status: 401,
-      message: "Only admin can access this",
+    // } else {
+    //   res.status(401).send({
+    //     status: 401,
+    //     message: "Only admin can access this",
+    //   });
+    // }
+  } catch (err) {
+    console.log(err);
+    res.status(500).send({
+      status: 500,
+      message: "Unable to Create Project",
     });
   }
 };
@@ -69,8 +76,11 @@ exports.getProjectMembers = (req, res) => {
     });
   }
   projectModel
-    .findOne({ _id: req.params.id, organisation: user.organisation })
-    .populate("project_leader project_assignee", "name pic")
+    .findOne({
+      _id: req.params.id,
+      organisation: user.organisation.organisation,
+    })
+    .populate("project_leader project_assignee", "name pic email")
     .then(async (docs) => {
       if (docs.length == 0) {
         //get Task Details
@@ -100,19 +110,19 @@ exports.getProject = (req, res) => {
   const user = req.user;
   // console.log(user);
   let query = {};
-  if (user.role == "admin" || user.role == "subadmin")
-    query = { organisation: user.organisation };
+  if (user.organisation.role == "admin" || user.organisation.role == "subadmin")
+    query = { organisation: user.organisation.organisation };
   else
     query = {
       $and: [
         {
           $or: [
-            { project_assignee: user._id },
-            { project_leader: user._id },
-            { created_by: user._id },
+            { project_assignee: user.id },
+            { project_leader: user.id },
+            { created_by: user.id },
           ],
         },
-        { organisation: user.organisation },
+        { organisation: user.organisation.organisation },
       ],
     };
 
@@ -166,6 +176,7 @@ exports.getProjectById = (req, res) => {
       });
     });
 };
+
 exports.getTaskCountByProject = (req, res) => {
   const projectId = { project_id: req.params.id };
   taskModel.find(projectId, "task_status", (err, docs) => {
@@ -209,6 +220,7 @@ exports.getTaskCountByProject = (req, res) => {
     }
   });
 };
+
 exports.getTaskByStatus = (req, res) => {
   const projectId = req.query.project_id;
   const taskStatus = req.query.task_status;
@@ -270,6 +282,7 @@ exports.editProject = (req, res) => {
     });
   }
 };
+
 exports.deleteProject = async (req, res) => {
   const user = req.user;
   const project_id = { _id: req.params.id, organisation: user.organisation };
@@ -313,6 +326,7 @@ exports.deleteProject = async (req, res) => {
     .status(200)
     .send({ status: "200", message: "Project Deleted Successfully" });
 };
+
 exports.changeProjectStatus = (req, res) => {
   const user = req.user;
   if (
@@ -501,6 +515,7 @@ exports.assignProject = async (req, res) => {
   //   });
   // }
 };
+
 exports.assignTeamLeader = async (req, res) => {
   const user = req.user;
   const project_leader = req.body.project_leader;

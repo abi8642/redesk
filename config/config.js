@@ -14,7 +14,7 @@ let config = {
     6: "user",
   },
   task_status: {
-    1: "ACTIVE",
+    1: "Active",
     2: "In_Progress",
     3: "QA",
     4: "Completed",

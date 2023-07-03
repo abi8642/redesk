@@ -77,17 +77,17 @@ const {
   createOrganisation,
   checkSubDomain,
   sendInviteFromOrganisation,
+  sendInviteFromOrganisationWithRole,
   getOrganisationList,
   verifyOrganisation,
   getDashboardDetails,
   sendInviteFromCSV,
-  verifyEmailInvite,
   verifyInvitation,
+  verifyInvitationWithRole,
   createCategory,
   editCategory,
   allCategories,
   createOrganisationfromEmail,
-  sendInviteFromOrganisationWithRole,
 } = require("../controllers/organisationController");
 const {
   allMessages,
@@ -123,12 +123,17 @@ router.post(
   sendInviteFromOrganisation
 );
 router.post(
+  "/sendInviteWithRole",
+  requiredAuth(["admin", "subadmin", "team_leader"]),
+  sendInviteFromOrganisationWithRole
+);
+router.post(
   "/sendInviteFromCSV",
   requiredAuth(["admin", "subadmin", "team_leader"]),
   sendInviteFromCSV
 );
-router.post("/verifyEmailInvite", verifyEmailInvite);
-router.post("/verifyInvitation", verifyInvitation);
+router.post("/verifyEmailInvite", verifyInvitation);
+router.post("/verifyInvitation", verifyInvitationWithRole);
 router.get("/getdashboarddetails", requiredAuth(), getDashboardDetails);
 
 router.post("/createCategory", requiredAuth(), createCategory);

@@ -535,59 +535,91 @@ exports.signout = (req, res) => {
 // high priority
 exports.getUser = (req, res) => {
   const user = req.user;
-  // console.log("asda" + req.io);
 
-  // if (user.role === "admin") {
-  // if (true) {
-  //not include role admin
   let userList = [];
   User.find(
     {
       "organisation_list.organisation": user.organisation.organisation,
     },
     async (err, docs) => {
-      // User.find((err, docs) => {
-      console.log("docs", docs);
+      if (err) {
+        return res.status(400).send({
+          status: "400",
+          message: "Failed to retrieve the User List: ",
+        });
+      }
+
+      // loop all users to add the task details of each user to the user List
+      for (let doc of docs) {
+        let users = {};
+        users.name = doc.name;
+        users.email = doc.email;
+        users._id = doc._id;
+        users.status = doc.status;
+        users.pic = doc.pic;
+
+        for (let data of doc.organisation_list) {
+          if (data.organisation == user.organisation.organisation) {
+            users.role = data.role;
+          }
+        }
+
+        users.taskCount = {};
+
+        await task.find(
+          {
+            task_assignee: { $in: doc._id },
+            organisation: user.organisation.organisation,
+          },
+          (err, results) => {
+            if (err) {
+              console.log(err);
+            }
+            let taskCount = {};
+            taskCount.active = 0;
+            taskCount.onProcess = 0;
+            taskCount.complete = 0;
+            taskCount.QA = 0;
+            taskCount.backlogs = 0;
+            taskCount.confirmed = 0;
+            for (let taskObj of results) {
+              switch (taskObj.task_status) {
+                case 1:
+                  taskCount.active++;
+                  break;
+                case 2:
+                  taskCount.onProcess++;
+                  break;
+                case 3:
+                  taskCount.QA++;
+                  break;
+                case 4:
+                  taskCount.complete++;
+                  break;
+                case 5:
+                  taskCount.backlogs++;
+                  break;
+                case 6:
+                  taskCount.confirmed++;
+                  break;
+              }
+            }
+            users.taskCount = taskCount;
+          }
+        );
+
+        userList.push(users);
+      }
+      // console.log("userList", userList);
+
       if (!err) {
         // req.io.emit("message", docs);
         // req.io.to("room2").emit("message", docs);
-        let tasks = [];
-        for (let doc of docs) {
-          task
-            .find({
-              task_assignee: { $in: doc._id },
-              organisation: user.organisation.organisation,
-            })
-            .populate("task_assignee", "pic status _id email name")
-            .exec((err, results) => {
-              if (err) {
-                console.log(err);
-              }
-              for (let taskObj of results) {
-                tasks.push(taskObj);
-                // console.log("taskObj", tasks);
-              }
-            });
-        }
-        tasks.map((t) => {
-          console.log("task", t);
-        });
 
-        res.status(200).send({ status: "200", message: "User List", docs });
-      } else {
-        return res.status(400).send({
-          status: "400",
-          message: "Failed to retrieve the User List: " + err,
-        });
+        res.status(200).send({ status: "200", message: "User List", userList });
       }
     }
   );
-  // } else {
-  //   res.status(400).send({
-  //     status: 400,
-  //     message: "Only admin can access this",
-  //   });
-  // }
 };
 
 exports.allUserFromOrgs = (req, res) => {

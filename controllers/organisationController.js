@@ -409,6 +409,71 @@ exports.sendInviteFromOrganisation = async (req, res) => {
   }
 };
 
+exports.sendInviteFromOrganisationWithRole = async (req, res) => {
+  const user = req.user;
+  const { email, role } = req.body;
+  let blankFields = [];
+
+  if (!email || email === "" || typeof email !== "string") {
+    blankFields.push("Email");
+  }
+  if (!role || role === "" || typeof role !== "number") {
+    blankFields.push("Role");
+  }
+  if (blankFields.length > 0) {
+    return res.status(400).send({
+      status: "400",
+      message: `${blankFields} is required`,
+    });
+  }
+  if (role < 4 || role > 6) {
+    return res.status(400).send({
+      status: "400",
+      message: `role must be between 1 and 6, inclusive`,
+    });
+  }
+
+  try {
+    const organisation = await Organisation.findOne({
+      _id: user.organisation.organisation,
+    });
+
+    jwt.sign(
+      { organisationId: organisation._id, email, role: role },
+      process.env.INVITE_KEY,
+      {
+        expiresIn: "1d",
+      },
+      (err, emailToken) => {
+        if (err) {
+          return res.status(400).send({
+            status: "400",
+            message: "Unable to signup. Try again later",
+          });
+        }
+        transporter.sendMail({
+          from: "invite@apptimates.com",
+          to: email,
+          subject: "Please set up your account for Redesk",
+          text: `Please click on the link to set up your account for ${organisation.organisation_name} at Redesk http://dev.redesk.in/signup?token=${emailToken}&email=${email}`,
+        });
+
+        return res.status(201).send({
+          status: "201",
+          message: "Successfully sent invitation",
+        });
+      }
+    );
+  } catch (err) {
+    console.log(err);
+    return res.status(500).send({
+      status: "500",
+      message: "Unable to send invitation. Try again later",
+      err,
+    });
+  }
+};
+
 exports.sendInviteFromCSV = async (req, res) => {
   const user = req.user;
 
@@ -483,7 +548,7 @@ exports.sendInviteFromCSV = async (req, res) => {
     });
 };
 
-exports.verifyEmailInvite = async (req, res) => {
+exports.verifyInvitation = async (req, res) => {
   const { email, name } = req.body;
   let blankFields = [];
   try {
@@ -585,9 +650,8 @@ exports.verifyEmailInvite = async (req, res) => {
   }
 };
 
-exports.verifyInvitation = async (req, res) => {
+exports.verifyInvitationWithRole = async (req, res) => {
   const { email, name } = req.body;
-  const role = parseInt(req.body.role);
   let blankFields = [];
   try {
     if (!email || email === "" || typeof email !== "string") {
@@ -595,9 +659,6 @@ exports.verifyInvitation = async (req, res) => {
     }
     if (!name || name === "" || typeof name !== "string") {
       blankFields.push("Name");
-    }
-    if (!role || role === "" || typeof role !== "number") {
-      blankFields.push("Role");
     }
     if (
       !req.headers.authorization ||
@@ -610,12 +671,6 @@ exports.verifyInvitation = async (req, res) => {
       return res.status(400).send({
         status: "400",
         message: `${blankFields} is required`,
-      });
-    }
-    if (role < 4 || role > 6) {
-      return res.status(400).send({
-        status: "400",
-        message: `role must be between 1 and 6, inclusive`,
       });
     }
 
@@ -652,7 +707,7 @@ exports.verifyInvitation = async (req, res) => {
                 $push: {
                   organisation_list: {
                     organisation: decoded.organisationId,
-                    role: config.user_role[role],
+                    role: config.user_role[decoded.role],
                     priority: 1,
                   },
                 },
@@ -672,7 +727,7 @@ exports.verifyInvitation = async (req, res) => {
             organisation_list: [
               {
                 organisation: decoded.organisationId,
-                role: config.user_role[role],
+                role: config.user_role[decoded.role],
                 priority: 1,
               },
             ],
@@ -784,25 +839,25 @@ exports.getOrganisationList = (req, res) => {
 };
 
 exports.getDashboardDetails = async (req, res) => {
-  // const projectId = { project_id: req.params.id };
   const user = req.user;
-  console.log("req.user = " + req.user);
+
   const projectCount = await Project.countDocuments({
-    organisation: user.organisation,
+    organisation: user.organisation.organisation,
   });
-  const taskCount = await Task.countDocuments({
-    organisation: user.organisation,
+  const taskCount = await Task.find({
+    task_status: { $nin: [6] },
+  }).countDocuments({
+    organisation: user.organisation.organisation,
   });
   const userCount = await User.countDocuments({
-    organisation: user.organisation,
-    role: { $ne: "client" },
+    "organisation_list.organisation": user.organisation.organisation,
+    "organisation_list.role": { $ne: "client" },
   });
   const clientCount = await User.countDocuments({
-    organisation: user.organisation,
-    role: "client",
+    "organisation_list.organisation": user.organisation.organisation,
+    "organisation_list.role": "client",
   });
 
-  // const projectList = await project.find({ organisation: user.organisation });
   return res.status(200).send({
     status: "200",
     message: "Dashboard details",

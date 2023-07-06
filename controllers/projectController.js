@@ -146,35 +146,44 @@ exports.getProject = (req, res) => {
     });
 };
 
-exports.getProjectById = (req, res) => {
+exports.getProjectById = async (req, res) => {
   const user = req.user;
   const projectId = { _id: req.params.id };
-  projectModel
-    .findOne(projectId)
-    .populate("project_leader project_assignee", "name pic")
-    .then(async (docs) => {
-      if (docs.length == 0) {
-        //get Task Details
+  let id = "649e9d828da01338cc1b969f";
+  await projectModel.find(
+    {
+      project_leader: { $in: id },
+    },
+    (err, docs) => {
+      console.log("docs", docs);
+    }
+  );
+  // projectModel
+  //   .findOne(projectId)
+  //   .populate("project_leader project_assignee", "name pic")
+  //   .then(async (docs) => {
+  //     if (docs.length == 0) {
+  //       //get Task Details
 
-        return res.status(400).send({
-          status: "400",
-          message: "No project found",
-        });
-      }
-      // const tasks = await taskModel.find({ project_id: req.params.id });
-      // console.log(tasks);
-      // docs._doc.tasks = tasks || [];
+  //       return res.status(400).send({
+  //         status: "400",
+  //         message: "No project found",
+  //       });
+  //     }
+  //     // const tasks = await taskModel.find({ project_id: req.params.id });
+  //     // console.log(tasks);
+  //     // docs._doc.tasks = tasks || [];
 
-      return res
-        .status(200)
-        .send({ status: "200", message: "Project Details", docs });
-    })
-    .catch((err) => {
-      return res.status(500).send({
-        status: "500",
-        message: "Failed to retrieve the Project List. Try again later",
-      });
-    });
+  //     return res
+  //       .status(200)
+  //       .send({ status: "200", message: "Project Details", docs });
+  //   })
+  //   .catch((err) => {
+  //     return res.status(500).send({
+  //       status: "500",
+  //       message: "Failed to retrieve the Project List. Try again later",
+  //     });
+  //   });
 };
 
 exports.getTaskCountByProject = (req, res) => {

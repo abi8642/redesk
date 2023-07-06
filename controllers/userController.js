@@ -5,6 +5,7 @@ const config = require("../config/config");
 const Organisation = require("../models/organisation");
 const { validationResult } = require("express-validator");
 const task = require("../models/task");
+const project = require("../models/project");
 
 exports.sendOtp = async (req, res) => {
   const { email } = req.body;
@@ -564,8 +565,6 @@ exports.getUser = (req, res) => {
           }
         }
 
-        users.taskCount = {};
-
         await task.find(
           {
             task_assignee: { $in: doc._id },
@@ -573,41 +572,83 @@ exports.getUser = (req, res) => {
           },
           (err, results) => {
             if (err) {
-              console.log(err);
+              return res
+                .status(400)
+                .send({ status: "400", message: "Failed To Get User List" });
             }
+            let projectIds = [];
+            users.totalProjectCount = 0;
+            for (let result of results) {
+              let i = 0;
+              for (i = 0; i < projectIds.length; i++) {
+                if (projectIds[i].toString() == result.project_id.toString()) {
+                  break;
+                }
+              }
+              if (i == projectIds.length) {
+                projectIds[i++] = result.project_id;
+              }
+              const uniqueProjectCount = projectIds.length;
+              users.totalProjectCount = uniqueProjectCount;
+            }
+
+            users.taskCount = {};
             let taskCount = {};
-            taskCount.active = 0;
-            taskCount.onProcess = 0;
-            taskCount.complete = 0;
-            taskCount.QA = 0;
-            taskCount.backlogs = 0;
-            taskCount.confirmed = 0;
+
+            taskCount.active = {};
+            taskCount.active.count = 0;
+            taskCount.active.taskDetails = [];
+            taskCount.onProcess = {};
+            taskCount.onProcess.count = 0;
+            taskCount.onProcess.taskDetails = [];
+            taskCount.complete = {};
+            taskCount.complete.count = 0;
+            taskCount.complete.taskDetails = [];
+            taskCount.QA = {};
+            taskCount.QA.count = 0;
+            taskCount.QA.taskDetails = [];
+
+            taskCount.backlogs = {};
+            taskCount.backlogs.count = 0;
+            taskCount.backlogs.taskDetails = [];
+            taskCount.confirmed = {};
+            taskCount.confirmed.count = 0;
+            taskCount.confirmed.taskDetails = [];
+
             for (let taskObj of results) {
+              // console.log(taskObj);
+
               switch (taskObj.task_status) {
                 case 1:
-                  taskCount.active++;
+                  taskCount.active.count++;
+                  taskCount.active.taskDetails.push(taskObj);
                   break;
                 case 2:
-                  taskCount.onProcess++;
+                  taskCount.onProcess.count++;
+                  taskCount.onProcess.taskDetails.push(taskObj);
                   break;
                 case 3:
-                  taskCount.QA++;
+                  taskCount.QA.count++;
+                  taskCount.QA.taskDetails.push(taskObj);
+
                   break;
                 case 4:
-                  taskCount.complete++;
+                  taskCount.complete.count++;
+                  taskCount.complete.taskDetails.push(taskObj);
                   break;
                 case 5:
-                  taskCount.backlogs++;
+                  taskCount.backlogs.count++;
+                  taskCount.backlogs.taskDetails.push(taskObj);
                   break;
                 case 6:
-                  taskCount.confirmed++;
+                  taskCount.confirmed.count++;
+                  taskCount.onProcess.taskDetails.push(taskObj);
                   break;
               }
             }
             users.taskCount = taskCount;
           }
         );
-
         userList.push(users);
       }
       // console.log("userList", userList);
@@ -620,6 +661,86 @@ exports.getUser = (req, res) => {
       }
     }
   );
+};
+
+exports.userDetails = (req, res) => {
+  const { userID } = req.params;
+
+  User.findOne({ _id: userID })
+    .then(async (users) => {
+      if (!users) {
+        return res.status(404).json({
+          status: "404",
+          message: "User not found",
+        });
+      }
+
+      const userProjectTaskList = {
+        _id: users._id,
+        pic: users.pic,
+        name: users.name,
+        email: users.email,
+        status: users.status,
+        projectDetails: [],
+      };
+
+      let orgs = [];
+
+      for (let org of users.organisation_list) {
+        if (req.user.organisation.organisation == org.organisation)
+          orgs.push(org);
+      }
+
+      userProjectTaskList.role = orgs[0].role;
+
+      const projectList = await project.find({
+        $or: [
+          { project_assignee: users._id },
+          { project_leader: users._id },
+          { created_by: users._id },
+        ],
+      });
+
+      for (const eachProject of projectList) {
+        const taskList = await task.find({
+          $and: [
+            { project_id: eachProject._id },
+            {
+              $or: [{ task_assignee: users._id }, { created_by: users._id }],
+            },
+          ],
+        });
+
+        const projectWithTasks = {
+          _id: eachProject._id,
+          name: eachProject.name,
+          description: eachProject.description,
+          project_status: eachProject.project_status,
+          category: eachProject.project_category,
+          project_client: eachProject.project_client,
+          project_start_date: eachProject.project_start_date,
+          project_end_date: eachProject.project_end_date,
+          project_no: eachProject.project_no,
+          created_by: eachProject.created_by,
+          project_leader: eachProject.project_leader,
+          project_assignee: eachProject.project_assignee,
+          taskList: taskList,
+        };
+
+        userProjectTaskList.projectDetails.push(projectWithTasks);
+      }
+      return res.status(200).json({
+        status: "200",
+        message: "Success",
+        data: userProjectTaskList,
+      });
+    })
+    .catch((error) => {
+      return res.status(500).json({
+        status: "500",
+        message: "Internal Server Error",
+      });
+    });
 };
 
 exports.allUserFromOrgs = (req, res) => {

@@ -7,6 +7,8 @@ const project = require("../models/project");
 const { validationResult } = require("express-validator");
 const User = require("../models/user");
 const notification = require("../models/notification");
+const mongoose = require("mongoose");
+const { ObjectId } = require("mongodb");
 
 //create task
 exports.createTask = (req, res) => {
@@ -198,30 +200,33 @@ exports.getTaskArray = async (req, res) => {
   //   query = { organisation: user.organisation };
   // }
 
-  let query = {};
-  if (user.role == "admin" || user.role == "subadmin")
+  let query = {
+    $and: [
+      {
+        $or: [{ task_assignee: user.id }, { created_by: user.id }],
+      },
+      { organisation: user.organisation.organisation },
+      // { project_id: id ? id : {} },
+    ],
+  };
+  if (
+    user.organisation.role == "admin" ||
+    user.organisation.role == "subadmin"
+  ) {
     query = {
-      organisation: user.organisation,
+      organisation: user.organisation.organisation,
       // project_id: id ? id : {},
     };
-  else
-    query = {
-      $and: [
-        {
-          $or: [{ task_assignee: user._id }, { created_by: user._id }],
-        },
-        { organisation: user.organisation },
-        // { project_id: id ? id : {} },
-      ],
-    };
-  if (user.role == "team_leader") {
-    const project = await ProjectModel.find({ project_leader: user._id });
+  }
+
+  if (user.organisation.role == "team_leader") {
+    const project = await ProjectModel.find({ project_leader: user.id });
 
     const project_id = project.map((item) => item._id);
 
     query = {
       project_id: { $in: project_id },
-      organisation: user.organisation,
+      organisation: user.organisation.organisation,
     };
   }
 
@@ -231,32 +236,35 @@ exports.getTaskArray = async (req, res) => {
       "project_name name pic"
     )
     .exec((err, docs) => {
-      // let taskObj = {
-      //   active: [],
-      //   in_progress: [],
-      //   qa: [],
-      //   completed: [],
-      //   backlogs: [],
-      // };
       let taskArr = [
         {
           title: "Pending",
+          count: 0,
           array: [],
         },
         {
           title: "InProcess",
+          count: 0,
           array: [],
         },
         {
           title: "Testing",
+          count: 0,
           array: [],
         },
         {
           title: "COMPLETED",
+          count: 0,
           array: [],
         },
         {
           title: "Backlogs",
+          count: 0,
+          array: [],
+        },
+        {
+          title: "Confirmed",
+          count: 0,
           array: [],
         },
       ];
@@ -264,19 +272,28 @@ exports.getTaskArray = async (req, res) => {
         docs.forEach((element) => {
           switch (element.task_status + "") {
             case "1":
+              taskArr[0].count += 1;
               taskArr[0].array.push(element);
               break;
             case "2":
+              taskArr[1].count += 1;
               taskArr[1].array.push(element);
               break;
             case "3":
+              taskArr[2].count += 1;
               taskArr[2].array.push(element);
               break;
             case "4":
+              taskArr[3].count += 1;
               taskArr[3].array.push(element);
               break;
             case "5":
+              taskArr[4].count += 1;
               taskArr[4].array.push(element);
+              break;
+            case "6":
+              taskArr[5].count += 1;
+              taskArr[5].array.push(element);
               break;
           }
         });
@@ -456,58 +473,64 @@ exports.changeTaskStatus = (req, res) => {
   };
   const status = parseInt(req.body.status);
 
-  if (status > 6 && status < 1) {
+  if (status > 6 || status < 1) {
     return res
       .status(400)
       .send({ status: "400", message: "Failed to Update Task" });
   }
-  if (status === 6) {
-    if (
-      user.organisation.role === "admin" ||
-      user.organisation.role === "team_lead" ||
-      user.organisation.role === "subadmin"
-    ) {
-      TaskModel.findOneAndUpdate(condition, { task_status: status })
-        .then((docs) => {
-          if (!docs) {
+
+  try {
+    if (status === 6) {
+      if (
+        user.organisation.role === "admin" ||
+        user.organisation.role === "team_lead" ||
+        user.organisation.role === "subadmin"
+      ) {
+        TaskModel.findOneAndUpdate(condition, { task_status: status })
+          .then((docs) => {
+            if (!docs) {
+              return res
+                .status(400)
+                .send({ status: "400", message: "Failed to Update Task" });
+            }
+            return res
+              .status(200)
+              .send({ status: "200", message: "Succesffully Updated Task" });
+          })
+          .catch((err) => {
             return res
               .status(400)
-              .send({ status: "400", message: "Failed to Task Update" });
-          }
-          return res
-            .status(200)
-            .send({ status: "200", message: "Succesffully Updated Task" });
-        })
-        .catch((err) => {
+              .send({ status: "400", message: "Something went wrong" });
+          });
+      } else {
+        return res.status(400).send({
+          status: "400",
+          message: "Not Authorized to Change the status to CONFIRMED",
+        });
+      }
+    }
+
+    TaskModel.findOneAndUpdate(condition, { task_status: status })
+      .then((docs) => {
+        if (!docs) {
           return res
             .status(400)
-            .send({ status: "400", message: "Something went wrong", err });
-        });
-    } else {
-      return res.status(400).send({
-        status: "400",
-        message: "Not Authorized to Change the status to CONFIRMED",
-      });
-    }
-  }
-  // let newRole = config.task_status[status];
-  // console.log(newRole);
-  TaskModel.findOneAndUpdate(condition, { task_status: status })
-    .then((docs) => {
-      if (!docs) {
+            .send({ status: "400", message: "Failed to Update Task" });
+        }
+        return res
+          .status(200)
+          .send({ status: "200", message: "Succesffully Updated Task" });
+      })
+      .catch((err) => {
         return res
           .status(400)
-          .send({ status: "400", message: "Failed to Task Update" });
-      }
-      return res
-        .status(200)
-        .send({ status: "200", message: "Succesffully Updated Task" });
-    })
-    .catch((err) => {
-      return res
-        .status(400)
-        .send({ status: "400", message: "Something went wrong", err });
-    });
+          .send({ status: "400", message: "Something went wrong" });
+      });
+  } catch (err) {
+    return res
+      .status(500)
+      .send({ status: "500", message: "Something went wrong" });
+  }
 };
 
 // task reminder route
@@ -597,34 +620,35 @@ exports.addTaskComment = async (req, res) => {
 };
 
 exports.getTaskCount = async (req, res) => {
-  // const projectId = { project_id: req.params.id };
   const user = req.user;
-  // const projectList = await project.find({ organisation: user.organisation });
 
   let query = {};
-  if (user.role == "admin" || user.role == "subadmin")
-    query = { organisation: user.organisation };
-  else
+  query = {
+    $and: [
+      {
+        $or: [{ task_assignee: user.id }, { created_by: user.id }],
+      },
+      { organisation: user.organisation.organisation },
+    ],
+  };
+  if (
+    user.organisation.role == "admin" ||
+    user.organisation.role == "subadmin"
+  ) {
+    query = { organisation: user.organisation.organisation };
+  }
+
+  if (user.organisation.role == "team_leader") {
+    const project_list = await ProjectModel.find({ project_leader: user.id });
+
+    const project_id_list = project_list.map((item) => item._id);
     query = {
-      $and: [
-        {
-          $or: [{ task_assignee: user._id }, { created_by: user._id }],
-        },
-        { organisation: user.organisation },
-      ],
-    };
-
-  if (user.role == "team_leader") {
-    const project = await ProjectModel.find({ project_leader: user._id });
-
-    const project_id = project.map((item) => item._id);
-
-    query = {
-      project_id: { $in: project_id },
-      organisation: user.organisation,
+      project_id: { $in: project_id_list },
+      organisation: user.organisation.organisation,
     };
   }
-  TaskModel.find(query, "task_status", (err, docs) => {
+
+  TaskModel.find(query, (err, docs) => {
     if (!err) {
       let obj = {
         active: 0,
@@ -632,6 +656,7 @@ exports.getTaskCount = async (req, res) => {
         qa: 0,
         completed: 0,
         backlogs: 0,
+        confirmed: 0,
       };
       for (var i = 0; i < docs.length; i++) {
         switch (docs[i].task_status + "") {
@@ -649,6 +674,9 @@ exports.getTaskCount = async (req, res) => {
             break;
           case "5":
             obj.backlogs = obj.backlogs + 1;
+            break;
+          case "6":
+            obj.confirmed = obj.confirmed + 1;
             break;
         }
         // obj[docs[i].task_status] = obj[docs[i].task_status] + 1;

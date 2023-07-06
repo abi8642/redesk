@@ -190,6 +190,7 @@ exports.getTaskByProject = (req, res) => {
     });
 };
 
+// Get all task list by task status
 exports.getTaskArray = async (req, res) => {
   const user = req.user;
   const id = req.params.id;

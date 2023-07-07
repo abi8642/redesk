@@ -362,19 +362,35 @@ exports.checkSubDomain = (req, res) => {
 
 exports.sendInviteFromOrganisation = async (req, res) => {
   const user = req.user;
-  // console.log("user = " + user);
+  let { email, role } = req.body;
+  let blankFields = [];
 
-  const { email } = req.body;
+  if (!email || email === "" || typeof email !== "string") {
+    blankFields.push("Email");
+  }
+  if (!role || typeof role !== "number") {
+    role = 6;
+  }
+  if (blankFields.length > 0) {
+    return res.status(400).send({
+      status: "400",
+      message: `${blankFields} is required`,
+    });
+  }
+  if (role < 2 || role > 6) {
+    return res.status(400).send({
+      status: "400",
+      message: `role must be between 2 and 6, inclusive`,
+    });
+  }
 
   try {
     const organisation = await Organisation.findOne({
       _id: user.organisation.organisation,
     });
 
-    // console.log("organisation", organisation);
-
     jwt.sign(
-      { organisationId: organisation._id, email },
+      { organisationId: organisation._id, email, role },
       process.env.INVITE_KEY,
       {
         expiresIn: "1d",
@@ -384,7 +400,6 @@ exports.sendInviteFromOrganisation = async (req, res) => {
           return res.status(400).send({
             status: "400",
             message: "Unable to signup. Try again later",
-            err,
           });
         }
         transporter.sendMail({
@@ -415,76 +430,99 @@ exports.sendInviteFromCSV = async (req, res) => {
 
   let file = req.files.file;
 
-  const workbook = xlsx.readFile(file.tempFilePath); // Step 2
-  let workbook_sheet = workbook.SheetNames; // Step 3
-  let workbook_response = xlsx.utils.sheet_to_json(
-    // Step 4
-    workbook.Sheets[workbook_sheet[0]]
-  );
-
-  let promises = [];
-
-  for (let i = 0; i < workbook_response.length; i++) {
-    const { email } = workbook_response[i];
-    if (!email) {
-      console.log("NO email found");
-      continue;
-    }
-    const organisation = await Organisation.findOne({ _id: user.organisation });
-    jwt.sign(
-      { _id: organisation._id, email },
-      process.env.INVITE_KEY,
-      {
-        expiresIn: "1d",
-      },
-      (err, emailToken) => {
+  if (file) {
+    file.mv(
+      "D:/rechargekit/redesk-v2-api/files/" + file.name,
+      async function (err) {
         if (err) {
-          return res.status(400).send({
-            status: "500",
-            message: "Unable to signup. Try again later",
-            err,
-          });
-        }
-        console.log(email);
-        promises.push(
-          new Promise((resolve, reject) => {
-            transporter.sendMail(
+          res.send(err);
+        } else {
+          const workbook = xlsx.readFile(
+            "D:/rechargekit/redesk-v2-api/files/" + file.name
+          ); // Step 2
+          let workbook_sheet = workbook.SheetNames; // Step 3
+          let workbook_response = xlsx.utils.sheet_to_json(
+            // Step 4
+            workbook.Sheets[workbook_sheet[0]]
+          );
+          let promises = [];
+
+          for (let i = 0; i < workbook_response.length; i++) {
+            let { email, role } = workbook_response[i];
+            if (!email) {
+              console.log("NO email found");
+              continue;
+            }
+            if (!role) {
+              role = 6;
+            }
+            const organisation = await Organisation.findOne({
+              _id: user.organisation.organisation,
+            });
+            jwt.sign(
+              { organisationId: organisation._id, email, role },
+              process.env.INVITE_KEY,
               {
-                from: "invite@apptimates.com",
-                to: email,
-                subject: "Please set up your account for Redesk",
-                text: `Please click on the link to set up your account for ${organisation.organisation_name} at Redesk http://redesk.in/signup?token=${emailToken}&email=${email}`,
+                expiresIn: "1d",
               },
-              (err, info) => {
+              (err, emailToken) => {
                 if (err) {
-                  reject(err);
-                } else {
-                  resolve(info);
+                  return res.status(400).send({
+                    status: "500",
+                    message: "Unable to signup. Try again later",
+                    err,
+                  });
                 }
+
+                promises.push(
+                  new Promise((resolve, reject) => {
+                    transporter.sendMail(
+                      {
+                        from: "invite@apptimates.com",
+                        to: email,
+                        subject: "Please set up your account for Redesk",
+                        text: `Please click on the link to set up your account for ${organisation.organisation_name} at Redesk http://dev.redesk.in/signup?token=${emailToken}&email=${email}`,
+                      },
+                      (err, info) => {
+                        if (err) {
+                          reject(err);
+                        } else {
+                          resolve(info);
+                        }
+                      }
+                    );
+                  })
+                );
               }
             );
-          })
-        );
+          }
+          Promise.all(promises)
+            .then((data) => {
+              return res.status(201).send({
+                status: "201",
+                message: "Successfully sent invites",
+              });
+            })
+            .catch((err) => {
+              return res.status(400).send({
+                status: "400",
+                message: "Unable to send invites",
+              });
+            });
+        }
       }
     );
   }
 
-  Promise.all(promises)
-    .then((data) => {
-      return res.status(201).send({
-        status: "201",
-        message: "Successfully sent invites",
-      });
-    })
-    .catch((err) => {
-      return res.status(400).send({
-        status: "400",
-        message: "Unable to send invites",
-      });
-    });
+  // const workbook = xlsx.readFile(file.data); // Step 2
+  // let workbook_sheet = workbook.SheetNames; // Step 3
+  // let workbook_response = xlsx.utils.sheet_to_json(
+  //   // Step 4
+  //   workbook.Sheets[workbook_sheet[0]]
+  // );
 };
 
-exports.verifyEmailInvite = async (req, res) => {
+exports.verifyInvitation = async (req, res) => {
   const { email, name } = req.body;
   let blankFields = [];
   try {
@@ -519,10 +557,10 @@ exports.verifyEmailInvite = async (req, res) => {
         }
 
         const findUser = await User.findOne({ email: req.body.email });
+
         if (findUser) {
           let existOrNot = false;
           for (const value of findUser.organisation_list) {
-            // console.log("value", value);
             if (value.organisation == decoded.organisationId) {
               existOrNot = true;
               break;
@@ -541,13 +579,12 @@ exports.verifyEmailInvite = async (req, res) => {
                 $push: {
                   organisation_list: {
                     organisation: decoded.organisationId,
-                    role: "user",
+                    role: config.user_role[decoded.role],
                     priority: 1,
                   },
                 },
               }
             );
-            // console.log("Update Organization List");
 
             return res.status(201).send({
               status: "201",
@@ -561,7 +598,7 @@ exports.verifyEmailInvite = async (req, res) => {
             organisation_list: [
               {
                 organisation: decoded.organisationId,
-                role: "user",
+                role: config.user_role[decoded.role],
                 priority: 1,
               },
             ],
@@ -673,25 +710,25 @@ exports.getOrganisationList = (req, res) => {
 };
 
 exports.getDashboardDetails = async (req, res) => {
-  // const projectId = { project_id: req.params.id };
   const user = req.user;
-  console.log("req.user = " + req.user);
+
   const projectCount = await Project.countDocuments({
-    organisation: user.organisation,
+    organisation: user.organisation.organisation,
   });
-  const taskCount = await Task.countDocuments({
-    organisation: user.organisation,
+  const taskCount = await Task.find({
+    task_status: { $nin: [6] },
+  }).countDocuments({
+    organisation: user.organisation.organisation,
   });
   const userCount = await User.countDocuments({
-    organisation: user.organisation,
-    role: { $ne: "client" },
+    "organisation_list.organisation": user.organisation.organisation,
+    "organisation_list.role": { $ne: "client" },
   });
   const clientCount = await User.countDocuments({
-    organisation: user.organisation,
-    role: "client",
+    "organisation_list.organisation": user.organisation.organisation,
+    "organisation_list.role": "client",
   });
 
-  // const projectList = await project.find({ organisation: user.organisation });
   return res.status(200).send({
     status: "200",
     message: "Dashboard details",
@@ -710,7 +747,7 @@ exports.createCategory = async (req, res) => {
     const { name } = req.body;
 
     const newCategory = await Organisation.findOneAndUpdate(
-      { _id: user.organisation },
+      { _id: user.organisation.organisation },
       { $addToSet: { projectCategories: name } }
     );
     return res.status(201).send({
@@ -731,7 +768,7 @@ exports.allCategories = async (req, res) => {
   try {
     const user = req.user;
     const categories = await Organisation.findOne(
-      { _id: user.organisation },
+      { _id: user.organisation.organisation },
       { projectCategories: 1 }
     );
 

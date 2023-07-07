@@ -5,6 +5,7 @@ const config = require("../config/config");
 const Organisation = require("../models/organisation");
 const { validationResult } = require("express-validator");
 const task = require("../models/task");
+const project = require("../models/project");
 
 exports.sendOtp = async (req, res) => {
   const { email } = req.body;
@@ -532,45 +533,214 @@ exports.signout = (req, res) => {
   res.status(200).send({ status: "200", message: "User signout successful" });
 };
 
+// high priority
 exports.getUser = (req, res) => {
   const user = req.user;
-  // console.log("asda" + req.io);
 
-  // if (user.role === "admin") {
-  if (true) {
-    //not include role admin
-    User.find(
-      {
-        role: { $nin: ["admin", "observer", "client", "subadmin"] },
-        organisation: user.organisation,
-        // status: "approved",
-      },
-      async (err, docs) => {
-        // User.find((err, docs) => {
-        if (!err) {
-          // req.io.emit("message", docs);
-          // req.io.to("room2").emit("message", docs);
-          const tasks = await task.find({
-            task_assignee: { $in: docs.map((doc) => doc._id) },
-            status: { $in: ["pending", "in_progress"] },
-            organisation: user.organisation,
-          });
-
-          res.status(200).send({ status: "200", message: "User List", docs });
-        } else {
-          return res.status(400).send({
-            status: "400",
-            message: "Failed to retrieve the User List: " + err,
-          });
-        }
+  let userList = [];
+  User.find(
+    {
+      "organisation_list.organisation": user.organisation.organisation,
+    },
+    async (err, docs) => {
+      if (err) {
+        return res.status(400).send({
+          status: "400",
+          message: "Failed to retrieve the User List: ",
+        });
       }
-    );
-  } else {
-    res.status(400).send({
-      status: 400,
-      message: "Only admin can access this",
+
+      // loop all users to add the task details of each user to the user List
+      for (let doc of docs) {
+        let users = {};
+        users.name = doc.name;
+        users.email = doc.email;
+        users._id = doc._id;
+        users.status = doc.status;
+        users.pic = doc.pic;
+
+        for (let data of doc.organisation_list) {
+          if (data.organisation == user.organisation.organisation) {
+            users.role = data.role;
+          }
+        }
+
+        await task.find(
+          {
+            task_assignee: { $in: doc._id },
+            organisation: user.organisation.organisation,
+          },
+          (err, results) => {
+            if (err) {
+              return res
+                .status(400)
+                .send({ status: "400", message: "Failed To Get User List" });
+            }
+            let projectIds = [];
+            users.totalProjectCount = 0;
+            for (let result of results) {
+              let i = 0;
+              for (i = 0; i < projectIds.length; i++) {
+                if (projectIds[i].toString() == result.project_id.toString()) {
+                  break;
+                }
+              }
+              if (i == projectIds.length) {
+                projectIds[i++] = result.project_id;
+              }
+              const uniqueProjectCount = projectIds.length;
+              users.totalProjectCount = uniqueProjectCount;
+            }
+
+            users.taskCount = {};
+            let taskCount = {};
+
+            taskCount.active = {};
+            taskCount.active.count = 0;
+            taskCount.active.taskDetails = [];
+            taskCount.onProcess = {};
+            taskCount.onProcess.count = 0;
+            taskCount.onProcess.taskDetails = [];
+            taskCount.complete = {};
+            taskCount.complete.count = 0;
+            taskCount.complete.taskDetails = [];
+            taskCount.QA = {};
+            taskCount.QA.count = 0;
+            taskCount.QA.taskDetails = [];
+
+            taskCount.backlogs = {};
+            taskCount.backlogs.count = 0;
+            taskCount.backlogs.taskDetails = [];
+            taskCount.confirmed = {};
+            taskCount.confirmed.count = 0;
+            taskCount.confirmed.taskDetails = [];
+
+            for (let taskObj of results) {
+              // console.log(taskObj);
+
+              switch (taskObj.task_status) {
+                case 1:
+                  taskCount.active.count++;
+                  taskCount.active.taskDetails.push(taskObj);
+                  break;
+                case 2:
+                  taskCount.onProcess.count++;
+                  taskCount.onProcess.taskDetails.push(taskObj);
+                  break;
+                case 3:
+                  taskCount.QA.count++;
+                  taskCount.QA.taskDetails.push(taskObj);
+
+                  break;
+                case 4:
+                  taskCount.complete.count++;
+                  taskCount.complete.taskDetails.push(taskObj);
+                  break;
+                case 5:
+                  taskCount.backlogs.count++;
+                  taskCount.backlogs.taskDetails.push(taskObj);
+                  break;
+                case 6:
+                  taskCount.confirmed.count++;
+                  taskCount.onProcess.taskDetails.push(taskObj);
+                  break;
+              }
+            }
+            users.taskCount = taskCount;
+          }
+        );
+        userList.push(users);
+      }
+      // console.log("userList", userList);
+
+      if (!err) {
+        // req.io.emit("message", docs);
+        // req.io.to("room2").emit("message", docs);
+
+        res.status(200).send({ status: "200", message: "User List", userList });
+      }
+    }
+  );
+};
+
+exports.userDetails = (req, res) => {
+  const { userID } = req.params;
+
+  User.findOne({ _id: userID })
+    .then(async (users) => {
+      if (!users) {
+        return res.status(404).json({
+          status: "404",
+          message: "User not found",
+        });
+      }
+
+      const userProjectTaskList = {
+        _id: users._id,
+        pic: users.pic,
+        name: users.name,
+        email: users.email,
+        status: users.status,
+        projectDetails: [],
+      };
+
+      let orgs = [];
+
+      for (let org of users.organisation_list) {
+        if (req.user.organisation.organisation == org.organisation)
+          orgs.push(org);
+      }
+
+      userProjectTaskList.role = orgs[0].role;
+
+      const projectList = await project.find({
+        $or: [
+          { project_assignee: users._id },
+          { project_leader: users._id },
+          { created_by: users._id },
+        ],
+      });
+
+      for (const eachProject of projectList) {
+        const taskList = await task.find({
+          $and: [
+            { project_id: eachProject._id },
+            {
+              $or: [{ task_assignee: users._id }, { created_by: users._id }],
+            },
+          ],
+        });
+
+        const projectWithTasks = {
+          _id: eachProject._id,
+          name: eachProject.name,
+          description: eachProject.description,
+          project_status: eachProject.project_status,
+          category: eachProject.project_category,
+          project_client: eachProject.project_client,
+          project_start_date: eachProject.project_start_date,
+          project_end_date: eachProject.project_end_date,
+          project_no: eachProject.project_no,
+          created_by: eachProject.created_by,
+          project_leader: eachProject.project_leader,
+          project_assignee: eachProject.project_assignee,
+          taskList: taskList,
+        };
+
+        userProjectTaskList.projectDetails.push(projectWithTasks);
+      }
+      return res.status(200).json({
+        status: "200",
+        message: "Success",
+        data: userProjectTaskList,
+      });
+    })
+    .catch((error) => {
+      return res.status(500).json({
+        status: "500",
+        message: "Internal Server Error",
+      });
     });
-  }
 };
 
 exports.allUserFromOrgs = (req, res) => {
@@ -578,31 +748,40 @@ exports.allUserFromOrgs = (req, res) => {
   // console.log("asda" + req.io);
 
   // if (user.role === "admin") {
-  if (true) {
-    //not include role admin
+  // if (true) {
+  //not include role admin
+  try {
     User.find(
       {
-        organisation: user.organisation,
+        "organisation_list.organisation": user.organisation.organisation,
+
         // status: "approved",
       },
-      (err, docs) => {
-        // User.find((err, docs) => {
-        if (!err) {
-          // req.io.emit("message", docs);
-          // req.io.to("room2").emit("message", docs);
-          res.status(200).send({ status: "200", message: "User List", docs });
-        } else {
-          return res.status(400).send({
-            status: "400",
-            message: "Failed to retrieve the User List: " + err,
-          });
-        }
+      { _id: 1, email: 1, name: 1, status: 1, pic: 1 }
+    ).exec((err, docs) => {
+      if (!err) {
+        // req.io.emit("message", docs);
+        // req.io.to("room2").emit("message", docs);
+        return res
+          .status(200)
+          .send({ status: "200", message: "User List", docs });
+      } else {
+        return res.status(400).send({
+          status: "400",
+          message: "Failed to retrieve the User List: " + err,
+        });
       }
-    );
-  } else {
-    res.status(400).send({
-      status: 400,
-      message: "Only admin can access this",
+    });
+    // } else {
+    //   res.status(400).send({
+    //     status: 400,
+    //     message: "Only admin can access this",
+    //   });
+    // }
+  } catch (err) {
+    return res.status(500).send({
+      status: 500,
+      message: "Failed to get user list",
     });
   }
 };
@@ -1005,6 +1184,7 @@ exports.allUsers = async (req, res) => {
   const users = await User.find(keyword).find({ _id: { $ne: req.user._id } });
   res.send(users);
 };
+
 exports.createObserver = async (req, res) => {
   const user = req.user;
   if (user.role === "admin" || user.role === "subadmin") {
@@ -1049,6 +1229,7 @@ exports.createObserver = async (req, res) => {
     });
   }
 };
+
 exports.getObserver = async (req, res) => {
   const user = req.user;
 
@@ -1072,67 +1253,108 @@ exports.getObserver = async (req, res) => {
 
 exports.createClient = async (req, res) => {
   const user = req.user;
-  if (user.role === "admin" || user.role === "subadmin") {
-    // const { name, email, password, role, pic, status } = req.body;
 
-    // const hashedPassword = await bcrypt.hash(password, 12);
+  req.body.role = "client";
+  req.body.status = "approved";
+  try {
+    const findUser = await User.findOne({ email: req.body.email });
 
-    req.body.role = "client";
-    req.body.status = "approved";
-    req.body.organisation = user.organisation;
-    let userExist = await User.find({
-      email: req.body.email,
-      organisation: user.organisation,
-    });
-    if (userExist.length > 0) {
-      return res.status(400).send({
-        status: "400",
-        message: "User already exist",
+    if (findUser !== null) {
+      let existOrNot = false;
+      for (const value of findUser.organisation_list) {
+        if (value.organisation == user.organisation.organisation) {
+          existOrNot = true;
+          break;
+        }
+      }
+
+      if (existOrNot) {
+        return res.status(400).send({
+          status: "400",
+          message: "User is already exist on the organization",
+        });
+      } else {
+        await User.updateOne(
+          { _id: findUser._id },
+          {
+            $push: {
+              organisation_list: {
+                organisation: user.organisation.organisation,
+                role: req.body.role,
+                priority: 1,
+              },
+            },
+          }
+        );
+
+        return res.status(201).send({
+          status: "201",
+          message: "Successfully added User the to Organisation",
+        });
+      }
+    } else {
+      const newUser = new User({
+        email: req.body.email,
+        name: req.body.name,
+        organisation_list: [
+          {
+            organisation: user.organisation.organisation,
+            role: req.body.role,
+            priority: 1,
+          },
+        ],
+      });
+      newUser.save();
+      // console.log("insert user");
+
+      return res.status(201).send({
+        status: "201",
+        message: "Successfully added the User to Organisation",
       });
     }
-
-    try {
-      const newUser = new User(req.body);
-      const result = await newUser.save();
-      res.status(200).send({
-        status: "200",
-        message: "Client created successfully",
-        result,
-      });
-    } catch (err) {
-      res.status(400).send({
-        status: "400",
-        message: "Something went wrong",
-        err,
-      });
-    }
-  } else {
+  } catch (err) {
     res.status(400).send({
-      status: 400,
-      message: "Only admin can access this",
+      status: "400",
+      message: "Something went wrong",
     });
   }
 };
 
 exports.getClient = async (req, res) => {
   const user = req.user;
+  try {
+    const client = await User.find(
+      {
+        "organisation_list.organisation": user.organisation.organisation,
+        "organisation_list.role": "client",
+      },
+      {
+        _id: 1,
+        email: 1,
+        name: 1,
+        status: 1,
+        pic: 1,
+      }
+    );
 
-  const client = await User.find({
-    role: "client",
-    organisation: user.organisation,
-  });
-  if (!client) {
-    return res.status(400).send({
-      status: "400",
-      message: "Client not found",
+    if (!client) {
+      return res.status(400).send({
+        status: "400",
+        message: "Client not found",
+      });
+    }
+
+    return res.status(200).send({
+      status: "200",
+      message: "Client fetched successfully",
+      client,
+    });
+  } catch (err) {
+    return res.status(500).send({
+      status: "500",
+      message: "Failed To Get Client",
     });
   }
-
-  res.status(200).send({
-    status: "200",
-    message: "Client fetched successfully",
-    client,
-  });
 };
 
 exports.createSubAdmin = async (req, res) => {
@@ -1179,6 +1401,7 @@ exports.createSubAdmin = async (req, res) => {
     });
   }
 };
+
 exports.getSubadmin = async (req, res) => {
   const user = req.user;
 

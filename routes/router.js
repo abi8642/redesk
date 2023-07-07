@@ -11,6 +11,7 @@ const {
   signin,
   signout,
   getUser,
+  userDetails,
   getLoginUser,
   userEdit,
   userApproveOrReject,
@@ -81,7 +82,7 @@ const {
   verifyOrganisation,
   getDashboardDetails,
   sendInviteFromCSV,
-  verifyEmailInvite,
+  verifyInvitation,
   createCategory,
   editCategory,
   allCategories,
@@ -125,7 +126,7 @@ router.post(
   requiredAuth(["admin", "subadmin", "team_leader"]),
   sendInviteFromCSV
 );
-router.post("/verifyEmailInvite", verifyEmailInvite);
+router.post("/verifyEmailInvite", verifyInvitation);
 router.get("/getdashboarddetails", requiredAuth(), getDashboardDetails);
 
 router.post("/createCategory", requiredAuth(), createCategory);
@@ -149,6 +150,11 @@ router.get("/signout", requiredAuth(), signout);
 
 router.get("/allUserFromOrgs", requiredAuth(), allUserFromOrgs);
 router.get("/userList", requiredAuth(["admin", "subadmin"]), getUser);
+router.get(
+  "/userDetails/:userID",
+  requiredAuth(["admin", "subadmin"]),
+  userDetails
+);
 router.get("/teamLeader", requiredAuth(), getTeamLeaderList);
 // router.get("/observerlist", requiredAuth(), getObserversList);
 router.get("/employeeList", requiredAuth(), getEmployeeList);

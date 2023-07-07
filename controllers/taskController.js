@@ -7,6 +7,8 @@ const project = require("../models/project");
 const { validationResult } = require("express-validator");
 const User = require("../models/user");
 const notification = require("../models/notification");
+const mongoose = require("mongoose");
+const { ObjectId } = require("mongodb");
 
 //create task
 exports.createTask = (req, res) => {
@@ -56,45 +58,46 @@ exports.createTask = (req, res) => {
           String(taskNo).padStart(5, "0");
 
         payload.task_no = reference_id;
-        payload.organisation = user.organisation;
-        payload.created_by = user._id;
+        payload.organisation = user.organisation.organisation;
+        payload.created_by = user.id;
         TaskModel.create(payload)
           .then(async (task) => {
             if (task) {
-              payload.task_assignee.forEach((element) => {
-                Notification.create({
-                  notification: "New Task assigned",
-                  status: "UNREAD",
-                  send_by: user._id,
-                  send_to: element,
-                });
-              });
+              console.log("task", task);
+              // payload.task_assignee.forEach((element) => {
+              //   Notification.create({
+              //     notification: "New Task assigned",
+              //     status: "UNREAD",
+              //     send_by: user.id,
+              //     send_to: element,
+              //   });
+              // });
 
               // const tasks=TaskM
 
               //!NOTIFICATION FOR TASK CREATION
 
-              req.io
-                .to(`project:${req.body.project_id}`)
-                .emit("message", "New task created");
+              // req.io
+              //   .to(`project:${req.body.project_id}`)
+              //   .emit("message", "New task created");
 
-              const getProjectMembers = await ProjectModel.findOne({
-                _id: payload.project_id,
-                organisation: user.organisation,
-              })
-                .populate("project_leader project_assignee", "name pic")
-                .lean();
+              // const getProjectMembers = await ProjectModel.findOne({
+              //   _id: payload.project_id,
+              //   organisation: user.organisation,
+              // })
+              //   .populate("project_leader project_assignee", "name pic")
+              //   .lean();
 
-              let members = [];
-              members.push(...getProjectMembers.project_leader);
-              members.push(...getProjectMembers.project_assignee);
+              // let members = [];
+              // members.push(...getProjectMembers.project_leader);
+              // members.push(...getProjectMembers.project_assignee);
 
-              await notification.create({
-                title: "New Task Created",
-                message: "New Task assigned",
-                status: "UNREAD",
-                users: members,
-              });
+              // await notification.create({
+              //   title: "New Task Created",
+              //   message: "New Task assigned",
+              //   status: "UNREAD",
+              //   users: members,
+              // });
 
               //!NOTIFICATION FOR TASK CREATION END
 
@@ -106,7 +109,7 @@ exports.createTask = (req, res) => {
             }
           })
           .catch((err) => {
-            console.log(err);
+            console.log("err", err);
             return res.status(500).send({
               status: "500",
               message: "Unable to create task. Try again later",
@@ -120,21 +123,24 @@ exports.createTask = (req, res) => {
 //task list
 exports.getTask = async (req, res) => {
   const user = req.user;
+  // console.log("user: ", user);
   let query = {};
-  if (user.role == "admin" || user.role == "subadmin")
-    query = { organisation: user.organisation };
+  if (user.organisation.role == "admin" || user.organisation.role == "subadmin")
+    query = { organisation: user.organisation.organisation };
   else
     query = {
       $and: [
         {
-          $or: [{ task_assignee: user._id }, { created_by: user._id }],
+          $or: [{ task_assignee: user.id }, { created_by: user.id }],
         },
-        { organisation: user.organisation },
+        { organisation: user.organisation.organisation },
       ],
     };
 
-  if (user.role == "team_leader") {
-    const project = await ProjectModel.find({ project_leader: user._id });
+  // console.log("query", query);
+
+  if (user.organisation.role == "team_leader") {
+    const project = await ProjectModel.find({ project_leader: user.id });
 
     const project_id = project.map((item) => item._id);
 
@@ -145,10 +151,7 @@ exports.getTask = async (req, res) => {
   }
 
   TaskModel.find(query)
-    .populate(
-      "project_id project_assignee task_assignee",
-      "project_name name pic"
-    )
+    .populate("project_id task_assignee", "project_name name pic")
     .exec((err, docs) => {
       if (!err) {
         return res
@@ -186,6 +189,8 @@ exports.getTaskByProject = (req, res) => {
       }
     });
 };
+
+// Get all task list by task status
 exports.getTaskArray = async (req, res) => {
   const user = req.user;
   const id = req.params.id;
@@ -196,30 +201,33 @@ exports.getTaskArray = async (req, res) => {
   //   query = { organisation: user.organisation };
   // }
 
-  let query = {};
-  if (user.role == "admin" || user.role == "subadmin")
+  let query = {
+    $and: [
+      {
+        $or: [{ task_assignee: user.id }, { created_by: user.id }],
+      },
+      { organisation: user.organisation.organisation },
+      // { project_id: id ? id : {} },
+    ],
+  };
+  if (
+    user.organisation.role == "admin" ||
+    user.organisation.role == "subadmin"
+  ) {
     query = {
-      organisation: user.organisation,
+      organisation: user.organisation.organisation,
       // project_id: id ? id : {},
     };
-  else
-    query = {
-      $and: [
-        {
-          $or: [{ task_assignee: user._id }, { created_by: user._id }],
-        },
-        { organisation: user.organisation },
-        // { project_id: id ? id : {} },
-      ],
-    };
-  if (user.role == "team_leader") {
-    const project = await ProjectModel.find({ project_leader: user._id });
+  }
+
+  if (user.organisation.role == "team_leader") {
+    const project = await ProjectModel.find({ project_leader: user.id });
 
     const project_id = project.map((item) => item._id);
 
     query = {
       project_id: { $in: project_id },
-      organisation: user.organisation,
+      organisation: user.organisation.organisation,
     };
   }
 
@@ -229,32 +237,35 @@ exports.getTaskArray = async (req, res) => {
       "project_name name pic"
     )
     .exec((err, docs) => {
-      // let taskObj = {
-      //   active: [],
-      //   in_progress: [],
-      //   qa: [],
-      //   completed: [],
-      //   backlogs: [],
-      // };
       let taskArr = [
         {
           title: "Pending",
+          count: 0,
           array: [],
         },
         {
           title: "InProcess",
+          count: 0,
           array: [],
         },
         {
           title: "Testing",
+          count: 0,
           array: [],
         },
         {
           title: "COMPLETED",
+          count: 0,
           array: [],
         },
         {
           title: "Backlogs",
+          count: 0,
+          array: [],
+        },
+        {
+          title: "Confirmed",
+          count: 0,
           array: [],
         },
       ];
@@ -262,19 +273,28 @@ exports.getTaskArray = async (req, res) => {
         docs.forEach((element) => {
           switch (element.task_status + "") {
             case "1":
+              taskArr[0].count += 1;
               taskArr[0].array.push(element);
               break;
             case "2":
+              taskArr[1].count += 1;
               taskArr[1].array.push(element);
               break;
             case "3":
+              taskArr[2].count += 1;
               taskArr[2].array.push(element);
               break;
             case "4":
+              taskArr[3].count += 1;
               taskArr[3].array.push(element);
               break;
             case "5":
+              taskArr[4].count += 1;
               taskArr[4].array.push(element);
+              break;
+            case "6":
+              taskArr[5].count += 1;
+              taskArr[5].array.push(element);
               break;
           }
         });
@@ -392,6 +412,7 @@ exports.getTaskById = (req, res) => {
       }
     });
 };
+
 //task edit
 exports.editTask = (req, res) => {
   const user = req.user;
@@ -445,34 +466,74 @@ exports.closeTask = async (req, res) => {
 
 exports.changeTaskStatus = (req, res) => {
   const user = req.user;
-  const condition = { _id: req.params.id, organisation: user.organisation };
-  // console.log(req.body.status);
+  const condition = {
+    $and: [
+      { _id: req.params.id },
+      { organisation: user.organisation.organisation },
+    ],
+  };
   const status = parseInt(req.body.status);
 
-  if (status >= 6) {
+  if (status > 6 || status < 1) {
     return res
       .status(400)
       .send({ status: "400", message: "Failed to Update Task" });
   }
-  // let newRole = config.task_status[status];
-  // console.log(newRole);
-  TaskModel.findOneAndUpdate(condition, { task_status: status })
-    .then((docs) => {
-      if (!docs) {
+
+  try {
+    if (status === 6) {
+      if (
+        user.organisation.role === "admin" ||
+        user.organisation.role === "team_lead" ||
+        user.organisation.role === "subadmin"
+      ) {
+        TaskModel.findOneAndUpdate(condition, { task_status: status })
+          .then((docs) => {
+            if (!docs) {
+              return res
+                .status(400)
+                .send({ status: "400", message: "Failed to Update Task" });
+            }
+            return res
+              .status(200)
+              .send({ status: "200", message: "Succesffully Updated Task" });
+          })
+          .catch((err) => {
+            return res
+              .status(400)
+              .send({ status: "400", message: "Something went wrong" });
+          });
+      } else {
+        return res.status(400).send({
+          status: "400",
+          message: "Not Authorized to Change the status to CONFIRMED",
+        });
+      }
+    }
+
+    TaskModel.findOneAndUpdate(condition, { task_status: status })
+      .then((docs) => {
+        if (!docs) {
+          return res
+            .status(400)
+            .send({ status: "400", message: "Failed to Update Task" });
+        }
+        return res
+          .status(200)
+          .send({ status: "200", message: "Succesffully Updated Task" });
+      })
+      .catch((err) => {
         return res
           .status(400)
-          .send({ status: "400", message: "Failed to Task Update" });
-      }
-      return res
-        .status(200)
-        .send({ status: "200", message: "Succesffully Updated Task" });
-    })
-    .catch((err) => {
-      return res
-        .status(400)
-        .send({ status: "400", message: "Something went wrong", err });
-    });
+          .send({ status: "400", message: "Something went wrong" });
+      });
+  } catch (err) {
+    return res
+      .status(500)
+      .send({ status: "500", message: "Something went wrong" });
+  }
 };
+
 // task reminder route
 exports.reminderTask = async (req, res) => {
   const _id = req.params.id;
@@ -560,34 +621,35 @@ exports.addTaskComment = async (req, res) => {
 };
 
 exports.getTaskCount = async (req, res) => {
-  // const projectId = { project_id: req.params.id };
   const user = req.user;
-  // const projectList = await project.find({ organisation: user.organisation });
 
   let query = {};
-  if (user.role == "admin" || user.role == "subadmin")
-    query = { organisation: user.organisation };
-  else
+  query = {
+    $and: [
+      {
+        $or: [{ task_assignee: user.id }, { created_by: user.id }],
+      },
+      { organisation: user.organisation.organisation },
+    ],
+  };
+  if (
+    user.organisation.role == "admin" ||
+    user.organisation.role == "subadmin"
+  ) {
+    query = { organisation: user.organisation.organisation };
+  }
+
+  if (user.organisation.role == "team_leader") {
+    const project_list = await ProjectModel.find({ project_leader: user.id });
+
+    const project_id_list = project_list.map((item) => item._id);
     query = {
-      $and: [
-        {
-          $or: [{ task_assignee: user._id }, { created_by: user._id }],
-        },
-        { organisation: user.organisation },
-      ],
-    };
-
-  if (user.role == "team_leader") {
-    const project = await ProjectModel.find({ project_leader: user._id });
-
-    const project_id = project.map((item) => item._id);
-
-    query = {
-      project_id: { $in: project_id },
-      organisation: user.organisation,
+      project_id: { $in: project_id_list },
+      organisation: user.organisation.organisation,
     };
   }
-  TaskModel.find(query, "task_status", (err, docs) => {
+
+  TaskModel.find(query, (err, docs) => {
     if (!err) {
       let obj = {
         active: 0,
@@ -595,6 +657,7 @@ exports.getTaskCount = async (req, res) => {
         qa: 0,
         completed: 0,
         backlogs: 0,
+        confirmed: 0,
       };
       for (var i = 0; i < docs.length; i++) {
         switch (docs[i].task_status + "") {
@@ -612,6 +675,9 @@ exports.getTaskCount = async (req, res) => {
             break;
           case "5":
             obj.backlogs = obj.backlogs + 1;
+            break;
+          case "6":
+            obj.confirmed = obj.confirmed + 1;
             break;
         }
         // obj[docs[i].task_status] = obj[docs[i].task_status] + 1;

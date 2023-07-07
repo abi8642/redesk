@@ -64,6 +64,7 @@ const taskSchema = new mongoose.Schema(
         "VERIFIED",
         "IN PROGRESS",
         "WONT FIX",
+        "COMPLETED",
         "CONFIRMED",
         "APPROVED BY CLIENT",
       ],

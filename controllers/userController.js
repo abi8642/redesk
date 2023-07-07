@@ -1253,48 +1253,71 @@ exports.getObserver = async (req, res) => {
 
 exports.createClient = async (req, res) => {
   const user = req.user;
-  // if (user.role === "admin" || user.role === "subadmin") {
-  // const { name, email, password, role, pic, status } = req.body;
-
-  // const hashedPassword = await bcrypt.hash(password, 12);
 
   req.body.role = "client";
   req.body.status = "approved";
-  req.body.organisation = user.organisation;
-
-  let userExist = await User.findOne({
-    email: req.body.email,
-  });
-
-  console.log("userExist", userExist[0].organisation_list);
-  if (userExist.length > 0) {
-    return res.status(400).send({
-      status: "400",
-      message: `User already exist`,
-    });
-  }
-
   try {
-    const newUser = new User(req.body);
-    const result = await newUser.save();
-    res.status(200).send({
-      status: "200",
-      message: "Client created successfully",
-      result,
-    });
+    const findUser = await User.findOne({ email: req.body.email });
+
+    if (findUser !== null) {
+      let existOrNot = false;
+      for (const value of findUser.organisation_list) {
+        if (value.organisation == user.organisation.organisation) {
+          existOrNot = true;
+          break;
+        }
+      }
+
+      if (existOrNot) {
+        return res.status(400).send({
+          status: "400",
+          message: "User is already exist on the organization",
+        });
+      } else {
+        await User.updateOne(
+          { _id: findUser._id },
+          {
+            $push: {
+              organisation_list: {
+                organisation: user.organisation.organisation,
+                role: req.body.role,
+                priority: 1,
+              },
+            },
+          }
+        );
+
+        return res.status(201).send({
+          status: "201",
+          message: "Successfully added User the to Organisation",
+        });
+      }
+    } else {
+      const newUser = new User({
+        email: req.body.email,
+        name: req.body.name,
+        organisation_list: [
+          {
+            organisation: user.organisation.organisation,
+            role: req.body.role,
+            priority: 1,
+          },
+        ],
+      });
+      newUser.save();
+      // console.log("insert user");
+
+      return res.status(201).send({
+        status: "201",
+        message: "Successfully added the User to Organisation",
+      });
+    }
   } catch (err) {
     res.status(400).send({
       status: "400",
       message: "Something went wrong",
-      err,
     });
   }
-  // } else {
-  //   res.status(400).send({
-  //     status: 400,
-  //     message: "Only admin can access this",
-  //   });
-  // }
 };
 
 exports.getClient = async (req, res) => {
@@ -1314,7 +1337,6 @@ exports.getClient = async (req, res) => {
       }
     );
 
-    console.log("client", client);
     if (!client) {
       return res.status(400).send({
         status: "400",
@@ -1331,7 +1353,6 @@ exports.getClient = async (req, res) => {
     return res.status(500).send({
       status: "500",
       message: "Failed To Get Client",
-      client,
     });
   }
 };

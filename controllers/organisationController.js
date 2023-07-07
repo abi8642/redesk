@@ -360,64 +360,15 @@ exports.checkSubDomain = (req, res) => {
   });
 };
 
-// exports.sendInviteFromOrganisation = async (req, res) => {
-//   const user = req.user;
-//   // console.log("user = " + user);
-
-//   const { email } = req.body;
-
-//   try {
-//     const organisation = await Organisation.findOne({
-//       _id: user.organisation.organisation,
-//     });
-
-//     // console.log("organisation", organisation);
-
-//     jwt.sign(
-//       { organisationId: organisation._id, email },
-//       process.env.INVITE_KEY,
-//       {
-//         expiresIn: "1d",
-//       },
-//       (err, emailToken) => {
-//         if (err) {
-//           return res.status(400).send({
-//             status: "400",
-//             message: "Unable to signup. Try again later",
-//           });
-//         }
-//         transporter.sendMail({
-//           from: "invite@apptimates.com",
-//           to: email,
-//           subject: "Please set up your account for Redesk",
-//           text: `Please click on the link to set up your account for ${organisation.organisation_name} at Redesk http://dev.redesk.in/signup?token=${emailToken}&email=${email}`,
-//         });
-
-//         return res.status(201).send({
-//           status: "201",
-//           message: "Successfully sent invitation",
-//         });
-//       }
-//     );
-//   } catch (err) {
-//     console.log(err);
-//     return res.status(500).send({
-//       status: "500",
-//       message: "Unable to send invitation. Try again later",
-//       err,
-//     });
-//   }
-// };
-
 exports.sendInviteFromOrganisation = async (req, res) => {
   const user = req.user;
-  const { email, role } = req.body;
+  let { email, role } = req.body;
   let blankFields = [];
 
   if (!email || email === "" || typeof email !== "string") {
     blankFields.push("Email");
   }
-  if (!role || role === "") {
+  if (!role || typeof role !== "number") {
     role = 6;
   }
   if (blankFields.length > 0) {
@@ -509,7 +460,7 @@ exports.sendInviteFromCSV = async (req, res) => {
               _id: user.organisation.organisation,
             });
             jwt.sign(
-              { _id: organisation._id, email, role },
+              { organisationId: organisation._id, email, role },
               process.env.INVITE_KEY,
               {
                 expiresIn: "1d",
@@ -571,108 +522,6 @@ exports.sendInviteFromCSV = async (req, res) => {
   // );
 };
 
-// exports.verifyInvitation = async (req, res) => {
-//   const { email, name } = req.body;
-//   let blankFields = [];
-//   try {
-//     if (!email || email === "" || typeof email !== "string") {
-//       blankFields.push("Email");
-//     }
-//     if (!name || name === "" || typeof name !== "string") {
-//       blankFields.push("Name");
-//     }
-//     if (
-//       !req.headers.authorization ||
-//       !req.headers.authorization.startsWith("Bearer") ||
-//       !req.headers.authorization.split(" ")[1]
-//     ) {
-//       blankFields.push("Token");
-//     }
-//     if (blankFields.length > 0) {
-//       return res.status(400).send({
-//         status: "400",
-//         message: `${blankFields} is required`,
-//       });
-//     }
-
-//     jwt.verify(
-//       req.headers.authorization.split(" ")[1],
-//       process.env.INVITE_KEY,
-//       async (err, decoded) => {
-//         if (err) {
-//           return res
-//             .status(400)
-//             .send({ status: "400", message: "Invalid Token" });
-//         }
-
-//         const findUser = await User.findOne({ email: req.body.email });
-//         if (findUser) {
-//           let existOrNot = false;
-//           for (const value of findUser.organisation_list) {
-//             // console.log("value", value);
-//             if (value.organisation == decoded.organisationId) {
-//               existOrNot = true;
-//               break;
-//             }
-//           }
-
-//           if (existOrNot) {
-//             return res.status(400).send({
-//               status: "400",
-//               message: "You are already exist on the organization",
-//             });
-//           } else {
-//             await User.updateOne(
-//               { _id: findUser._id },
-//               {
-//                 $push: {
-//                   organisation_list: {
-//                     organisation: decoded.organisationId,
-//                     role: "user",
-//                     priority: 1,
-//                   },
-//                 },
-//               }
-//             );
-//             // console.log("Update Organization List");
-
-//             return res.status(201).send({
-//               status: "201",
-//               message: "Successfully added User the to Organisation",
-//             });
-//           }
-//         } else {
-//           const user = new User({
-//             email,
-//             name,
-//             organisation_list: [
-//               {
-//                 organisation: decoded.organisationId,
-//                 role: "user",
-//                 priority: 1,
-//               },
-//             ],
-//           });
-//           user.save();
-//           // console.log("insert user");
-
-//           return res.status(201).send({
-//             status: "201",
-//             message: "Successfully added the User to Organisation",
-//           });
-//         }
-//       }
-//     );
-//   } catch (err) {
-//     console.log(err);
-//     return res.status(500).send({
-//       status: "500",
-//       message: "Unable to add the User to Organisation",
-//       err,
-//     });
-//   }
-// };
-
 exports.verifyInvitation = async (req, res) => {
   const { email, name } = req.body;
   let blankFields = [];
@@ -712,7 +561,7 @@ exports.verifyInvitation = async (req, res) => {
         if (findUser) {
           let existOrNot = false;
           for (const value of findUser.organisation_list) {
-            if (value.organisation == decoded._id) {
+            if (value.organisation == decoded.organisationId) {
               existOrNot = true;
               break;
             }
@@ -736,7 +585,6 @@ exports.verifyInvitation = async (req, res) => {
                 },
               }
             );
-            // console.log("Update Organization List");
 
             return res.status(201).send({
               status: "201",
@@ -899,7 +747,7 @@ exports.createCategory = async (req, res) => {
     const { name } = req.body;
 
     const newCategory = await Organisation.findOneAndUpdate(
-      { _id: user.organisation },
+      { _id: user.organisation.organisation },
       { $addToSet: { projectCategories: name } }
     );
     return res.status(201).send({
@@ -920,7 +768,7 @@ exports.allCategories = async (req, res) => {
   try {
     const user = req.user;
     const categories = await Organisation.findOne(
-      { _id: user.organisation },
+      { _id: user.organisation.organisation },
       { projectCategories: 1 }
     );
 

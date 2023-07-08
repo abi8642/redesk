@@ -204,7 +204,7 @@ router.put("/editClient/:id", requiredAuth(), param("id").notEmpty(), userEdit);
 router.post("/Task", requiredAuth(), createTask);
 router.get("/taskList", requiredAuth(), getTask);
 router.get("/taskListByProject/:id", requiredAuth(), getTaskByProject);
-router.get("/taskArray", requiredAuth(), getTaskArray);
+router.post("/taskArray", requiredAuth(), getTaskArray);
 router.get("/taskArrayByProject/:id", requiredAuth(), getTaskArray);
 router.delete("/task/:id", requiredAuth(), deleteTask);
 

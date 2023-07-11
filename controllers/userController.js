@@ -786,69 +786,65 @@ exports.allUserFromOrgs = (req, res) => {
   }
 };
 
-exports.getEmployeeList = (req, res) => {
+exports.getEmployeeList = async (req, res) => {
   const user = req.user;
   // console.log("asda" + req.io);
 
-  // if (user.role === "admin") {
-  if (true) {
-    //not include role admin
-    User.find(
-      {
-        role: {
-          $nin: ["admin", "team_leader", "observer", "client", "subadmin"],
-        },
-        organisation: user.organisation,
-      },
-      (err, docs) => {
-        // User.find((err, docs) => {
-        if (!err) {
-          // req.io.emit("message", docs);
-          // req.io.to("room2").emit("message", docs);
-          res.status(200).send({ status: "200", message: "User List", docs });
-        } else {
-          return res.status(400).send({
-            status: "400",
-            message: "Failed to retrieve the User List: " + err,
-          });
-        }
-      }
-    );
+  const employeeList = await User.find({
+    "organisation_list.role": {
+      $nin: ["admin", "team_leader", "observer", "client", "subadmin"],
+    },
+    "organisation_list.organisation": user.organisation.organisation,
+  });
+
+  const employeeListDetails = [];
+
+  if (employeeList) {
+    // req.io.emit("message", docs);
+    // req.io.to("room2").emit("message", docs);
+    for (let employee of employeeList) {
+      employeeListDetails.push({
+        name: employee.name,
+        email: employee.email,
+        pic: employee.pic,
+      });
+    }
+    return res
+      .status(200)
+      .send({ status: "200", message: "User List", employeeListDetails });
   } else {
-    res.status(400).send({
-      status: 400,
-      message: "Only admin can access this",
+    return res.status(400).send({
+      status: "400",
+      message: "Failed to retrieve the User List",
     });
   }
 };
 
-exports.getTeamLeaderList = (req, res) => {
+exports.getTeamLeaderList = async (req, res) => {
   const user = req.user;
-  // console.log("asda" + req.io);
+  const leaderList = await User.find({
+    "organisation_list.role": "team_leader",
+    "organisation_list.organisation": user.organisation.organisation,
+  });
+  const leaderListDetails = [];
 
-  // if (user.role === "admin") {
-  if (true) {
-    User.find(
-      { role: "team_leader", organisation: user.organisation },
-      (err, docs) => {
-        if (!err) {
-          // req.io.emit("message", docs);
-          // req.io.to("room2").emit("message", docs);
-          res
-            .status(200)
-            .send({ status: "200", message: "Team Leader List", docs });
-        } else {
-          return res.status(400).send({
-            status: "400",
-            message: "Failed to retrieve the User List: " + err,
-          });
-        }
-      }
-    );
+  if (leaderList) {
+    // req.io.emit("message", docs);
+    // req.io.to("room2").emit("message", docs);
+    for (let leader of leaderList) {
+      leaderListDetails.push({
+        name: leader.name,
+        email: leader.email,
+        pic: leader.pic,
+      });
+    }
+    return res
+      .status(200)
+      .send({ status: "200", message: "Team Leader List", leaderListDetails });
   } else {
-    res.status(400).send({
-      status: 400,
-      message: "Only admin can access this",
+    return res.status(400).send({
+      status: "400",
+      message: "Failed to retrieve the User List",
     });
   }
 };
@@ -904,7 +900,11 @@ exports.getLoginUser = (req, res) => {
 };
 
 exports.changeUserRoles = (req, res) => {
-  const condition = { _id: req.params.id };
+  const user = req.user;
+  const condition = {
+    _id: req.params.id,
+    "organisation_list.organisation": user.organisation.organisation,
+  };
   const role = parseInt(req.body.role);
 
   if (role >= 3) {
@@ -913,8 +913,7 @@ exports.changeUserRoles = (req, res) => {
       .send({ status: "400", message: "Failed to user Update" });
   }
   let newRole = config.user_role[role];
-  console.log(newRole);
-  User.findOneAndUpdate(condition, { role: newRole })
+  User.findOneAndUpdate(condition, { "organisation_list.role": newRole })
     .then((docs) => {
       if (!docs) {
         return res
@@ -923,9 +922,10 @@ exports.changeUserRoles = (req, res) => {
       }
       return res
         .status(200)
-        .send({ status: "200", message: "Succesffully Updated User", docs });
+        .send({ status: "200", message: "Succesffully Updated User" });
     })
     .catch((err) => {
+      console.log(err);
       return res
         .status(400)
         .send({ status: "400", message: "Something went wrong", err });

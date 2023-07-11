@@ -19,7 +19,7 @@ exports.sendMail = (userMail, subject, text) => {
     from: "invite@apptimates.com",
     to: userMail,
     subject: subject,
-    text: text,
+    html: text,
   };
   // console.log("mailOptions", mailOptions);
 

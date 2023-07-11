@@ -211,14 +211,17 @@ router.get("/taskListByUser", requiredAuth(), getTaskByUser);
 router.get("/task/:id", requiredAuth(), getTaskById);
 router.put("/taskEdit/:id", requiredAuth(), editTask);
 router.put("/taskClose/:id", requiredAuth(), closeTask);
-router.get("/taskReminder/:id", requiredAuth(), reminderTask);
+router.get(
+  "/taskReminder/:id",
+  requiredAuth(["admin", "subadmin"]),
+  reminderTask
+);
 router.get("/taskcount", requiredAuth(), getTaskCount);
 router.post("/changeTaskStatus/:id", requiredAuth(), changeTaskStatus);
 router.post(
   "/addTaskComment",
   requiredAuth(),
   body("id").notEmpty(),
-  // body("comment").notEmpty(),
   addTaskComment
 );
 

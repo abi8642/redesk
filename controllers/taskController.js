@@ -7,8 +7,6 @@ const project = require("../models/project");
 const { validationResult } = require("express-validator");
 const User = require("../models/user");
 const notification = require("../models/notification");
-const mongoose = require("mongoose");
-const { ObjectId } = require("mongodb");
 
 //create task
 exports.createTask = (req, res) => {
@@ -123,7 +121,6 @@ exports.createTask = (req, res) => {
 //task list
 exports.getTask = async (req, res) => {
   const user = req.user;
-  // console.log("user: ", user);
   let query = {};
   if (user.organisation.role == "admin" || user.organisation.role == "subadmin")
     query = { organisation: user.organisation.organisation };
@@ -194,12 +191,9 @@ exports.getTaskByProject = (req, res) => {
 exports.getTaskArray = async (req, res) => {
   const user = req.user;
   const id = req.params.id;
-  // let query = {};
-  // if (id) {
-  //   query = { project_id: id, organisation: user.organisation };
-  // } else {
-  //   query = { organisation: user.organisation };
-  // }
+  const startDate = new Date(req.body.fromdate);
+  const endDate = new Date(req.body.todate);
+  endDate.setDate(endDate.getDate() + 1);
 
   let query = {
     $and: [
@@ -231,7 +225,13 @@ exports.getTaskArray = async (req, res) => {
     };
   }
 
-  TaskModel.find(query)
+  TaskModel.find({
+    $and: [
+      query,
+      { createdAt: { $gte: startDate } },
+      { createdAt: { $lte: endDate } },
+    ],
+  })
     .populate(
       "project_id project_assignee task_assignee",
       "project_name name pic"
@@ -239,7 +239,7 @@ exports.getTaskArray = async (req, res) => {
     .exec((err, docs) => {
       let taskArr = [
         {
-          title: "Pending",
+          title: "Active",
           count: 0,
           array: [],
         },

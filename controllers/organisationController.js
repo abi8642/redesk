@@ -748,7 +748,8 @@ exports.createCategory = async (req, res) => {
 
     const newCategory = await Organisation.findOneAndUpdate(
       { _id: user.organisation.organisation },
-      { $addToSet: { projectCategories: name } }
+      { $addToSet: { projectCategories: name } },
+      { new: true }
     );
     return res.status(201).send({
       status: "201",
@@ -796,25 +797,48 @@ exports.editCategory = async (req, res) => {
     //   { $addToSet: { projectCategories: name } }
     // );
 
+    // const newCategory = await Organisation.findOneAndUpdate(
+    //   { _id: user.organisation.organisation },
+    //   {
+    //     $set: {
+    //       projectCategories: {
+    //         $map: {
+    //           input: "$projectCategories",
+    //           as: "category",
+    //           in: {
+    //             $cond: {
+    //               if: { $eq: ["$$category", oldName] },
+    //               then: newName,
+    //               else: "$$category",
+    //             },
+    //           },
+    //         },
+    //       },
+    //     },
+    //   }
+    // );
     const newCategory = await Organisation.findOneAndUpdate(
-      { _id: user.organisation },
-      {
-        $set: {
-          projectCategories: {
-            $map: {
-              input: "$projectCategories",
-              as: "category",
-              in: {
-                $cond: {
-                  if: { $eq: ["$$category", oldName] },
-                  then: newName,
-                  else: "$$category",
+      { _id: user.organisation.organisation },
+      [
+        {
+          $set: {
+            projectCategories: {
+              $map: {
+                input: "$projectCategories",
+                as: "category",
+                in: {
+                  $cond: {
+                    if: { $eq: ["$$category", oldName] },
+                    then: newName,
+                    else: "$$category",
+                  },
                 },
               },
             },
           },
         },
-      }
+      ],
+      { new: true }
     );
 
     return res.status(201).send({
@@ -823,6 +847,7 @@ exports.editCategory = async (req, res) => {
       data: newCategory,
     });
   } catch (err) {
+    console.log("err", err);
     return res.status(400).send({
       status: "400",
       message: "Something went wrong",

@@ -108,7 +108,6 @@ exports.getProjectMembers = (req, res) => {
 
 exports.getProject = (req, res) => {
   const user = req.user;
-  // console.log(user);
   let query = {};
   if (user.organisation.role == "admin" || user.organisation.role == "subadmin")
     query = { organisation: user.organisation.organisation };
@@ -149,41 +148,43 @@ exports.getProject = (req, res) => {
 exports.getProjectById = async (req, res) => {
   const user = req.user;
   const projectId = { _id: req.params.id };
-  let id = "649e9d828da01338cc1b969f";
-  await projectModel.find(
-    {
-      project_leader: { $in: id },
-    },
-    (err, docs) => {
-      console.log("docs", docs);
-    }
-  );
-  // projectModel
-  //   .findOne(projectId)
-  //   .populate("project_leader project_assignee", "name pic")
-  //   .then(async (docs) => {
-  //     if (docs.length == 0) {
-  //       //get Task Details
+  // await projectModel.findOne(
+  //   {
+  //     project_leader: id,
+  //   },
+  //   (err, docs) => {
+  //     console.log("docs", docs);
+  //   }
+  // );
+  projectModel
+    .findOne(projectId)
+    .populate("project_leader project_assignee", "name pic")
+    .then(async (docs) => {
+      if (docs.length == 0) {
+        //get Task Details
 
-  //       return res.status(400).send({
-  //         status: "400",
-  //         message: "No project found",
-  //       });
-  //     }
-  //     // const tasks = await taskModel.find({ project_id: req.params.id });
-  //     // console.log(tasks);
-  //     // docs._doc.tasks = tasks || [];
+        return res.status(400).send({
+          status: "400",
+          message: "No project found",
+        });
+      }
+      const projectDetails = {
+        project: docs,
+      };
+      const tasks = await taskModel.find({ project_id: req.params.id });
+      projectDetails.taskList = tasks;
 
-  //     return res
-  //       .status(200)
-  //       .send({ status: "200", message: "Project Details", docs });
-  //   })
-  //   .catch((err) => {
-  //     return res.status(500).send({
-  //       status: "500",
-  //       message: "Failed to retrieve the Project List. Try again later",
-  //     });
-  //   });
+      return res
+        .status(200)
+        .send({ status: "200", message: "Project Details", projectDetails });
+    })
+    .catch((err) => {
+      console.log("err", err);
+      return res.status(500).send({
+        status: "500",
+        message: "Failed to retrieve the Project List. Try again later",
+      });
+    });
 };
 
 exports.getTaskCountByProject = (req, res) => {
@@ -196,6 +197,7 @@ exports.getTaskCountByProject = (req, res) => {
         qa: 0,
         completed: 0,
         backlogs: 0,
+        confirmed: 0,
       };
       for (var i = 0; i < docs.length; i++) {
         switch (docs[i].task_status + "") {
@@ -213,6 +215,9 @@ exports.getTaskCountByProject = (req, res) => {
             break;
           case "5":
             obj.backlogs = obj.backlogs + 1;
+            break;
+          case "5":
+            obj.confirmed = obj.confirmed + 1;
             break;
         }
         // obj[docs[i].task_status] = obj[docs[i].task_status] + 1;
@@ -233,14 +238,22 @@ exports.getTaskCountByProject = (req, res) => {
 exports.getTaskByStatus = (req, res) => {
   const projectId = req.query.project_id;
   const taskStatus = req.query.task_status;
-  const condition = { project_id: projectId, task_status: taskStatus };
 
-  if (!projectId || !taskStatus) {
+  let blankFields = [];
+
+  if (!projectId) {
+    blankFields.push("project_id");
+  }
+  if (!taskStatus) {
+    blankFields.push("task_status");
+  }
+  if (blankFields.length > 0) {
     return res.status(400).send({
       status: "400",
-      message: "Project Id and Task Status is required",
+      message: `${blankFields} is required`,
     });
   }
+  const condition = { project_id: projectId, task_status: taskStatus };
 
   taskModel.find(condition, (err, docs) => {
     if (!err) {
@@ -258,155 +271,100 @@ exports.getTaskByStatus = (req, res) => {
 
 exports.editProject = (req, res) => {
   const user = req.user;
-  if (
-    user.role == "admin" ||
-    user.role == "team_leader" ||
-    user.role == "subadmin"
-  ) {
-    const condition = { _id: req.params.id, organisation: user.organisation };
-    projectModel
-      .updateMany(condition, req.body)
-      .then((docs) => {
-        if (!docs) {
-          return res
-            .status(400)
-            .send({ status: "400", message: "Failed to Update" });
-        }
-        return res.status(200).send({
-          status: "200",
-          message: "Succesffully Updated Project",
-          docs,
-        });
-      })
-      .catch((err) => {
-        return res.status(500).send({
-          status: 500,
-          message: "Unable to edit project. Try again later",
-        });
+
+  const condition = {
+    _id: req.params.id,
+    organisation: user.organisation.organisation,
+  };
+  projectModel
+    .updateMany(condition, req.body)
+    .then((docs) => {
+      if (!docs) {
+        return res
+          .status(400)
+          .send({ status: "400", message: "Failed to Update" });
+      }
+      return res.status(200).send({
+        status: "200",
+        message: "Succesffully Updated Project",
+        docs,
       });
-  } else {
-    res.status(401).send({
-      status: 401,
-      message: "Only admin can access this",
-    });
-  }
-};
-
-exports.deleteProject = async (req, res) => {
-  const user = req.user;
-  const project_id = { _id: req.params.id, organisation: user.organisation };
-
-  const docs1 = await user.find({
-    role: "admin",
-    organisation: user.organisation,
-  });
-  const docs = await projectModel
-    .findOne({
-      _id: req.params.id,
-      organisation: user.organisation,
     })
-    .populate("project_leader project_assignee", "name pic");
-  let members = [];
-  if (!docs)
-    return res.status(500).send({
-      status: "500",
-      message: "Failed to retrieve the task List. Try again later",
+    .catch((err) => {
+      return res.status(500).send({
+        status: 500,
+        message: "Unable to edit project. Try again later",
+      });
     });
-
-  // console.log(docs1);
-  members.push(...docs.project_leader);
-
-  members.push(...docs.project_assignee);
-  members.push(...docs1);
-
-  let isUserOfSameProj = members.find((item) => {
-    // console.log(item._id, user._id);
-    return item._id + "" == user._id + "";
-  });
-  // console.log(members, isUserOfSameProj);
-  if (!isUserOfSameProj) {
-    return res.status(500).send({
-      status: "500",
-      message: "You are not allowed to delete this Projecct",
-    });
-  }
-  await docs.remove();
-  return res
-    .status(200)
-    .send({ status: "200", message: "Project Deleted Successfully" });
 };
 
 exports.changeProjectStatus = (req, res) => {
   const user = req.user;
-  if (
-    user.role == "admin" ||
-    user.role == "team_leader" ||
-    user.role == "subadmin"
-  ) {
-    const condition = { _id: req.params.id, organisation: user.organisation };
-    const status = req.body.status;
 
-    if (!status) {
-      return res.status(400).send({
-        status: 400,
-        message: "Status is required",
-      });
-    }
-    let update = {};
-    if (status == 1) {
+  const condition = {
+    _id: req.params.id,
+    organisation: user.organisation.organisation,
+  };
+  const status = req.body.status;
+
+  if (!status || typeof status !== "number") {
+    return res.status(400).send({
+      status: 400,
+      message: "Status Must Be a Valid Integer",
+    });
+  }
+
+  let update = {};
+  switch (status) {
+    case 1:
       update = { project_status: "ACTIVE" };
-    } else if (status == 2) {
+      break;
+    case 2:
       update = { project_status: "HOLD" };
-    } else if (status == 3) {
-      update = {
-        project_status: "COMPLETED",
-        project_completion_date: Date.now(),
-      };
-    } else {
+      break;
+    case 3:
+      update = { project_status: "COMPLETED" };
+      break;
+    case 4:
+      update = { project_status: "INACtIVE" };
+      break;
+    default:
       return res.status(400).send({
         status: 400,
         message: "Invalid Status",
       });
-    }
-
-    projectModel
-      .updateMany(condition, update)
-      .then((docs) => {
-        if (!docs) {
-          return res
-            .status(400)
-            .send({ status: "400", message: "Failed to Update" });
-        }
-        return res.status(200).send({
-          status: "200",
-          message: "Succesffully Updated Project",
-          docs,
-        });
-      })
-      .catch((err) => {
-        return res.status(500).send({
-          status: 500,
-          message: "Unable to edit project. Try again later",
-        });
-      });
-  } else {
-    res.status(401).send({
-      status: 401,
-      message: "Only admin can access this",
-    });
   }
+
+  projectModel
+    .updateMany(condition, update)
+    .then((docs) => {
+      if (!docs) {
+        return res
+          .status(400)
+          .send({ status: "400", message: "Failed to Update" });
+      }
+      return res.status(200).send({
+        status: "200",
+        message: "Succesffully Updated Project",
+      });
+    })
+    .catch((err) => {
+      return res.status(500).send({
+        status: 500,
+        message: "Unable to edit project. Try again later",
+      });
+    });
 };
 
 exports.assignProject = async (req, res) => {
   const user = req.user;
   const project_assignee = req.body.project_assignee;
   const remove_assignee = req.body.remove_assignee;
-  console.log(user.role);
 
   if (
-    user.role != "admin" &&
-    user.role != "team_leader" &&
-    user.role != "subadmin"
+    user.organisation.role != "admin" &&
+    user.organisation.role != "team_leader" &&
+    user.organisation.role != "subadmin"
   ) {
     return res.status(401).send({
       status: 401,
@@ -414,197 +372,147 @@ exports.assignProject = async (req, res) => {
     });
   }
   const project = await projectModel.findById(req.params.id);
-  if (project.organisation != user.organisation) {
+  if (project.organisation != user.organisation.organisation) {
     return res.status(401).send({
       status: 401,
       message: "Enter project of yours organisation",
     });
   }
 
+  let data = {
+    removedUserCount: 0,
+    addedUserCount: 0,
+  };
+
+  if (remove_assignee && remove_assignee.length > 0) {
+    const updateProject = await projectModel.updateMany(
+      { _id: req.params.id },
+      { $pull: { project_assignee: { $in: remove_assignee } } }
+    );
+    if (updateProject) {
+      data.removedUserCount++;
+    } else {
+      return res.status(500).send({
+        status: 500,
+        message: "Unable to edit project. Try again later",
+      });
+    }
+  }
+
   if (project_assignee && project_assignee.length > 0) {
-    projectModel
-      .updateMany(
-        { _id: req.params.id },
-        { $addToSet: { project_assignee: project_assignee } }
-      )
-      .then(async (docs) => {
-        if (!docs) {
-          return res
-            .status(400)
-            .send({ status: "400", message: "Failed to Update" });
-        }
+    const updateProject = await projectModel.updateMany(
+      { _id: req.params.id },
+      { $addToSet: { project_assignee: project_assignee } }
+    );
 
-        //!NOTIFICATION FOR TASK CREATION
+    if (updateProject) {
+      data.addedUserCount++;
 
-        req.io
-          .to(`project:${req.body.project_id}`)
-          .emit("message", "New assignee added");
+      //!NOTIFICATION FOR TASK CREATION
 
-        await notification.create({
-          title: "New Assignee Added",
-          message: "New Assignee Added",
-          status: "UNREAD",
-          users: project_assignee,
-        });
+      // req.io
+      //   .to(`project:${req.body.project_id}`)
+      //   .emit("message", "New assignee added");
 
-        //!NOTIFICATION FOR TASK CREATION END
+      // await notification.create({
+      //   title: "New Assignee Added",
+      //   message: "New Assignee Added",
+      //   status: "UNREAD",
+      //   users: project_assignee,
+      // });
 
-        return res.status(200).send({
-          status: "200",
-          message: "Succesffully Updated Project",
-          docs,
-        });
-      })
-      .catch((err) => {
-        return res.status(500).send({
-          status: 500,
-          message: "Unable to edit project. Try again later",
-        });
+      //!NOTIFICATION FOR TASK CREATION END
+    } else {
+      return res.status(500).send({
+        status: 500,
+        message: "Unable to edit project. Try again later",
       });
-  } else if (remove_assignee && remove_assignee.length > 0) {
-    projectModel
-      .updateMany(
-        { _id: req.params.id },
-        { $pull: { project_assignee: { $in: remove_assignee } } }
-      )
-      .then((docs) => {
-        if (!docs) {
-          return res
-            .status(400)
-            .send({ status: "400", message: "Failed to Update" });
-        }
-        return res.status(200).send({
-          status: "200",
-          message: "Succesffully Updated Project",
-          docs,
-        });
-      })
-      .catch((err) => {
-        return res.status(500).send({
-          status: 500,
-          message: "Unable to edit project. Try again later",
-        });
-      });
-  } else {
+    }
+  }
+  if (
+    (!project_assignee || project_assignee.length === 0) &&
+    (!remove_assignee || remove_assignee.length === 0)
+  ) {
     return res.status(400).send({
       status: 400,
       message: "Please select atleast one user",
     });
   }
 
-  // if (user.role == "team_leader") {
-  //   const condition = { _id: req.params.id };
-
-  //   //push into array
-  //   projectModel
-  //   projectModel
-  //     .updateMany(condition, req.body)
-  //     .then((docs) => {
-  //       if (!docs) {
-  //         return res
-  //           .status(400)
-  //           .send({ status: "400", message: "Failed to Update" });
-  //       }
-  //       return res.status(200).send({
-  //         status: "200",
-  //         message: "Succesffully Updated Project",
-  //         docs,
-  //       });
-  //     })
-  //     .catch((err) => {
-  //       return res.status(500).send({
-  //         status: 500,
-  //         message: "Unable to edit project. Try again later",
-  //       });
-  //     });
-  // } else {
-  //   res.status(401).send({
-  //     status: 401,
-  //     message: "Only admin can access this",
-  //   });
-  // }
+  return res.status(200).send({
+    status: "200",
+    message: "Succesffully Updated Project",
+    data,
+  });
 };
 
 exports.assignTeamLeader = async (req, res) => {
   const user = req.user;
   const project_leader = req.body.project_leader;
   const remove_leader = req.body.remove_leader;
-  // console.log(user.role);
 
-  if (user.role != "admin" || user.role != "subadmin") {
-    return res.status(401).send({
-      status: 401,
-      message: "Only admin  can access this",
-    });
-  }
   const project = await projectModel.findById(req.params.id);
-  if (project.organisation != user.organisation) {
+  if (project.organisation != user.organisation.organisation) {
     return res.status(401).send({
       status: 401,
       message: "Enter project of yours organisation",
     });
   }
 
+  let data = {
+    removedLeaderCount: 0,
+    addedLeaderCount: 0,
+  };
+  if (remove_leader && remove_leader.length > 0) {
+    const updateProject = await projectModel.updateMany(
+      { _id: req.params.id },
+      { $pull: { project_leader: { $in: remove_leader } } }
+    );
+    if (updateProject) {
+      data.removedLeaderCount++;
+    } else {
+      return res.status(500).send({
+        status: 500,
+        message: "Unable to edit project. Try again later",
+      });
+    }
+  }
   if (project_leader && project_leader.length > 0) {
-    projectModel
-      .updateMany(
-        { _id: req.params.id },
-        { $addToSet: { project_leader: project_leader } }
-      )
-      .then((docs) => {
-        if (!docs) {
-          return res
-            .status(400)
-            .send({ status: "400", message: "Failed to Update" });
-        }
-        return res.status(200).send({
-          status: "200",
-          message: "Succesffully Updated Project",
-          docs,
-        });
-      })
-      .catch((err) => {
-        return res.status(500).send({
-          status: 500,
-          message: "Unable to edit project. Try again later",
-        });
+    const updateProject = await projectModel.updateMany(
+      { _id: req.params.id },
+      { $addToSet: { project_leader: project_leader } }
+    );
+
+    if (updateProject) {
+      data.addedLeaderCount++;
+    } else {
+      return res.status(500).send({
+        status: 500,
+        message: "Unable to edit project. Try again later",
       });
-  } else if (remove_leader && remove_leader.length > 0) {
-    projectModel
-      .updateMany(
-        { _id: req.params.id },
-        { $pull: { project_leader: { $in: remove_leader } } }
-      )
-      .then((docs) => {
-        if (!docs) {
-          return res
-            .status(400)
-            .send({ status: "400", message: "Failed to Update" });
-        }
-        return res.status(200).send({
-          status: "200",
-          message: "Succesffully Updated Project",
-          docs,
-        });
-      })
-      .catch((err) => {
-        return res.status(500).send({
-          status: 500,
-          message: "Unable to edit project. Try again later",
-        });
-      });
-  } else {
+    }
+  }
+  if (
+    (!project_leader || project_leader.length === 0) &&
+    (!remove_leader || remove_leader.length === 0)
+  ) {
     return res.status(400).send({
       status: 400,
       message: "Please select atleast one user",
     });
   }
+
+  return res.status(200).send({
+    status: "200",
+    message: "Succesffully Updated Project",
+    data,
+  });
 };
 
 exports.addProjectAttachment = async (req, res) => {
   const user = req.user;
   const project = await projectModel.findById(req.params.id);
-  if (project.organisation + "" != user.organisation + "") {
+  if (project.organisation + "" != user.organisation.organisation + "") {
     // console.log(project.organisation == user.organisation);
     // console.log(typeof user.organisation);
     return res.status(401).send({
@@ -618,7 +526,7 @@ exports.addProjectAttachment = async (req, res) => {
 
   // if (req.files && req.files.file) {
   // let fileName=
-  var dir = `${__dirname}/../public/attachments/${req.params.id}`;
+  let dir = `${__dirname}/../public/attachments/${req.params.id}`;
 
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
@@ -628,6 +536,7 @@ exports.addProjectAttachment = async (req, res) => {
   // });
 
   const bb = busboy({ headers: req.headers });
+  console.log(bb, "bb");
   let filename;
   bb.on("file", (name, file, info) => {
     // let { filename, encoding, mimeType } = info;

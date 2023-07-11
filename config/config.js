@@ -25,6 +25,7 @@ let config = {
     1: "ACTIVE",
     2: "HOLD",
     3: "COMPLETED",
+    4: "INACTIVE",
   },
 };
 

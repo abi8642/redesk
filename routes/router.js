@@ -63,7 +63,6 @@ const {
   getProjectMembers,
   addProjectAttachment,
   changeProjectStatus,
-  deleteProject,
   deleteProjectAttachment,
 } = require("../controllers/projectController");
 const { createRole, getRole } = require("../controllers/roleController");
@@ -237,12 +236,19 @@ router.post(
   deleteProjectAttachment
 );
 router.get("/projectList", requiredAuth(), getProject);
-router.put("/projectEdit/:id", requiredAuth(), editProject);
-router.delete("/project/:id", requiredAuth(), deleteProject);
+router.put(
+  "/projectEdit/:id",
+  requiredAuth(["admin", "subadmin", "team_leader"]),
+  editProject
+);
 router.get("/projectDetails/:id", requiredAuth(), getProjectById);
 router.get("/projectTaskCount/:id", requiredAuth(), getTaskCountByProject);
 router.get("/projecttaskListByStatus", requiredAuth(), getTaskByStatus);
-router.post("/changeProjectStatus/:id", requiredAuth(), changeProjectStatus);
+router.post(
+  "/changeProjectStatus/:id",
+  requiredAuth(["admin", "subadmin", "team_leader"]),
+  changeProjectStatus
+);
 router.put(
   "/assignProject/:id",
   requiredAuth(["admin", "subadmin", "team_leader"]),

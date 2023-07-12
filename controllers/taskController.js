@@ -10,7 +10,7 @@ const notification = require("../models/notification");
 const { sendMail } = require("../services/sendEmail");
 
 //create task
-exports.createTask = (req, res) => {
+exports.createTask = async (req, res) => {
   let payload = req.body;
   let user = req.user;
 
@@ -477,7 +477,7 @@ exports.closeTask = async (req, res) => {
   }
 };
 
-exports.changeTaskStatus = (req, res) => {
+exports.changeTaskStatus = async (req, res) => {
   const user = req.user;
   const condition = {
     $and: [
@@ -493,6 +493,7 @@ exports.changeTaskStatus = (req, res) => {
       .send({ status: "400", message: "Failed to Update Task" });
   }
 
+  let allOk = false;
   try {
     if (status === 6) {
       if (
@@ -500,87 +501,83 @@ exports.changeTaskStatus = (req, res) => {
         user.organisation.role === "team_lead" ||
         user.organisation.role === "subadmin"
       ) {
-        TaskModel.findOneAndUpdate(condition, { task_status: status })
-          .then(async (docs) => {
-            if (!docs) {
-              return res
-                .status(400)
-                .send({ status: "400", message: "Failed to Update Task" });
-            }
-            console.log("docs.task_assignee", docs.task_assignee);
-            if (docs.task_assignee) {
-              if (docs.task_assignee.length > 0) {
-                for (const eachTaskAssignee of docs.task_assignee) {
-                  const eachTaskAssigneeData = await User.findOne({
-                    _id: eachTaskAssignee,
-                  });
-                  if (eachTaskAssigneeData) {
-                    const assigneeMail = eachTaskAssigneeData.email;
-                    const subjects = "Task Created";
-                    const sendMsgs = `
-                        Task_Name: <b>${task.task_name}</b><br>
-                        Task_due_on: <b>${task.task_due_on}</b><br>
-                        Task_priority: <b>${task.task_priority}</b><br>
-                        Task_created_by:<b>${user.name}</b>`;
-                    sendMail(assigneeMail, subjects, sendMsgs);
-                  }
-                }
-              }
-            }
-            return res
-              .status(200)
-              .send({ status: "200", message: "Succesffully Updated Task" });
-          })
-          .catch((err) => {
-            return res
-              .status(400)
-              .send({ status: "400", message: "Something went wrong" });
-          });
-      } else {
-        return res.status(400).send({
-          status: "400",
-          message: "Not Authorized to Change the status to CONFIRMED",
+        let docs = await TaskModel.findOneAndUpdate(condition, {
+          task_status: status,
         });
-      }
-    }
 
-    TaskModel.findOneAndUpdate(condition, { task_status: status })
-      .then(async (docs) => {
-        if (!docs) {
-          return res
-            .status(400)
-            .send({ status: "400", message: "Failed to Update Task" });
-        }
         if (docs.task_assignee) {
           if (docs.task_assignee.length > 0) {
             for (const eachTaskAssignee of docs.task_assignee) {
               const eachTaskAssigneeData = await User.findOne({
                 _id: eachTaskAssignee,
               });
-
-              if (eachTaskAssigneeData) {
+              if (
+                eachTaskAssigneeData &&
+                eachTaskAssigneeData._id !== user.id
+              ) {
                 const assigneeMail = eachTaskAssigneeData.email;
                 const subjects = "Task Created";
                 const sendMsgs = `
-                        Task_Name: <b>${task.task_name}</b><br>
-                        Task_due_on: <b>${task.task_due_on}</b><br>
-                        Task_priority: <b>${task.task_priority}</b><br>
-                        Task_created_by:<b>${user.name}</b>`;
+                  Task_Name: <b>${docs.task_name}</b><br>
+                  Task_due_on: <b>${docs.task_due_on}</b><br>
+                  Task_priority: <b>${docs.task_priority}</b><br>
+                  Task_status_changed_by:<b>${user.name}</b><br>
+                  Current_task_status:<b>${
+                    config.task_status[docs.task_status]
+                  }</b>`;
                 sendMail(assigneeMail, subjects, sendMsgs);
               }
             }
           }
         }
-        return res
-          .status(200)
-          .send({ status: "200", message: "Succesffully Updated Task" });
-      })
-      .catch((err) => {
-        return res
-          .status(400)
-          .send({ status: "400", message: "Something went wrong" });
+        allOk = true;
+      } else {
+        return res.status(400).send({
+          status: "400",
+          message: "Not Authorized to Change the status to CONFIRMED",
+        });
+      }
+    } else {
+      let docs = await TaskModel.findOneAndUpdate(condition, {
+        task_status: status,
       });
+
+      if (docs.task_assignee) {
+        if (docs.task_assignee.length > 0) {
+          for (const eachTaskAssignee of docs.task_assignee) {
+            const eachTaskAssigneeData = await User.findOne({
+              _id: eachTaskAssignee,
+            });
+
+            if (eachTaskAssigneeData && eachTaskAssigneeData._id !== user.id) {
+              const assigneeMail = eachTaskAssigneeData.email;
+              const subjects = "Task Status Changed";
+              const sendMsgs = `
+                  Task_Name: <b>${docs.task_name}</b><br>
+                  Task_due_on: <b>${docs.task_due_on}</b><br>
+                  Task_priority: <b>${docs.task_priority}</b><br>
+                  Task_status_changed_by:<b>${user.name}</b><br>
+                  Current_task_status:<b>${
+                    config.task_status[docs.task_status]
+                  }</b>`;
+              sendMail(assigneeMail, subjects, sendMsgs);
+            }
+          }
+        }
+      }
+      allOk = true;
+    }
   } catch (err) {
+    console.log(err, "err");
+    return res
+      .status(500)
+      .send({ status: "500", message: "Something went wrong" });
+  }
+  if (allOk) {
+    return res
+      .status(200)
+      .send({ status: "200", message: "Succesffully Updated Task" });
+  } else {
     return res
       .status(500)
       .send({ status: "500", message: "Something went wrong" });

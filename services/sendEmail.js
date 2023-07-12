@@ -10,18 +10,12 @@ exports.sendMail = (userMail, subject, text) => {
     },
   });
 
-  // const obj = {
-  //   message: "To reset your password click on the link",
-  //   link: sendUrl,
-  // };
-
   const mailOptions = {
     from: "invite@apptimates.com",
     to: userMail,
     subject: subject,
     html: text,
   };
-  // console.log("mailOptions", mailOptions);
 
   return new Promise((resolve, reject) => {
     transporter.sendMail(mailOptions, (err, info) => {

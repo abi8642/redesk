@@ -5,21 +5,9 @@ const config = require("../config/config");
 const Organisation = require("../models/organisation");
 const crypto = require("crypto");
 const uuidv1 = require("uuid/v1");
-const nodemailer = require("nodemailer");
 const Project = require("../models/project");
 const Task = require("../models/task");
 const xlsx = require("xlsx");
-const transporter = nodemailer.createTransport({
-  host: "mail.apptimates.com",
-  port: 587,
-  auth: {
-    user: "invite@apptimates.com",
-    pass: "1234567", // naturally, replace both with your real credentials or an application-specific password
-  },
-});
-
-// user: "subhadev1289@gmail.com",
-// pass: "yzchxkbxrizezpet",
 
 exports.createOrganisation = async (req, res) => {
   // Check whether email already exists
@@ -402,12 +390,11 @@ exports.sendInviteFromOrganisation = async (req, res) => {
             message: "Unable to signup. Try again later",
           });
         }
-        transporter.sendMail({
-          from: "invite@apptimates.com",
-          to: email,
-          subject: "Please set up your account for Redesk",
-          text: `Please click on the link to set up your account for ${organisation.organisation_name} at Redesk http://dev.redesk.in/signup?token=${emailToken}&email=${email}`,
-        });
+        sendMail(
+          email,
+          "Please set up your account for Redesk",
+          `Please click on the link to set up your account for ${organisation.organisation_name} at Redesk http://dev.redesk.in/signup?token=${emailToken}&email=${email}`
+        );
 
         return res.status(201).send({
           status: "201",
@@ -476,21 +463,17 @@ exports.sendInviteFromCSV = async (req, res) => {
 
                 promises.push(
                   new Promise((resolve, reject) => {
-                    transporter.sendMail(
-                      {
-                        from: "invite@apptimates.com",
-                        to: email,
-                        subject: "Please set up your account for Redesk",
-                        text: `Please click on the link to set up your account for ${organisation.organisation_name} at Redesk http://dev.redesk.in/signup?token=${emailToken}&email=${email}`,
-                      },
-                      (err, info) => {
-                        if (err) {
-                          reject(err);
-                        } else {
-                          resolve(info);
-                        }
-                      }
-                    );
+                    sendMail(
+                      email,
+                      "Please set up your account for Redesk",
+                      `Please click on the link to set up your account for ${organisation.organisation_name} at Redesk http://dev.redesk.in/signup?token=${emailToken}&email=${email}`
+                    )
+                      .then((info) => {
+                        resolve(info);
+                      })
+                      .catch((err) => {
+                        reject(err);
+                      });
                   })
                 );
               }

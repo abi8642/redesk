@@ -745,17 +745,11 @@ exports.userDetails = (req, res) => {
 
 exports.allUserFromOrgs = (req, res) => {
   const user = req.user;
-  // console.log("asda" + req.io);
 
-  // if (user.role === "admin") {
-  // if (true) {
-  //not include role admin
   try {
     User.find(
       {
         "organisation_list.organisation": user.organisation.organisation,
-
-        // status: "approved",
       },
       { _id: 1, email: 1, name: 1, status: 1, pic: 1 }
     ).exec((err, docs) => {
@@ -772,12 +766,6 @@ exports.allUserFromOrgs = (req, res) => {
         });
       }
     });
-    // } else {
-    //   res.status(400).send({
-    //     status: 400,
-    //     message: "Only admin can access this",
-    //   });
-    // }
   } catch (err) {
     return res.status(500).send({
       status: 500,
@@ -834,6 +822,7 @@ exports.getTeamLeaderList = async (req, res) => {
     // req.io.to("room2").emit("message", docs);
     for (let leader of leaderList) {
       leaderListDetails.push({
+        id: leader._id,
         name: leader.name,
         email: leader.email,
         pic: leader.pic,
@@ -864,6 +853,7 @@ exports.getObserversList = async (req, res) => {
     // req.io.to("room2").emit("message", docs);
     for (let observer of observerList) {
       observerListDetails.push({
+        id: observer._id,
         name: observer.name,
         email: observer.email,
         pic: observer.pic,

@@ -186,7 +186,7 @@ exports.getProjectById = async (req, res) => {
   // );
   projectModel
     .findOne(projectId)
-    .populate("project_leader project_assignee", "name pic")
+    .populate("project_leader project_assignee", "_id name pic")
     .then(async (docs) => {
       if (docs.length == 0) {
         //get Task Details
@@ -199,7 +199,9 @@ exports.getProjectById = async (req, res) => {
       const projectDetails = {
         project: docs,
       };
-      const tasks = await taskModel.find({ project_id: req.params.id });
+      const tasks = await taskModel
+        .find({ project_id: req.params.id })
+        .populate("task_assignee", "_id name pic");
       projectDetails.taskList = tasks;
 
       return res

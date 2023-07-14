@@ -216,7 +216,7 @@ router.post(
   addTaskComment
 );
 
-//create project
+//project apis
 router.post(
   "/project",
   requiredAuth(["admin", "subadmin", "team_leader"]),

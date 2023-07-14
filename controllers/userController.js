@@ -786,100 +786,97 @@ exports.allUserFromOrgs = (req, res) => {
   }
 };
 
-exports.getEmployeeList = (req, res) => {
+exports.getEmployeeList = async (req, res) => {
   const user = req.user;
   // console.log("asda" + req.io);
 
-  // if (user.role === "admin") {
-  if (true) {
-    //not include role admin
-    User.find(
-      {
-        role: {
-          $nin: ["admin", "team_leader", "observer", "client", "subadmin"],
-        },
-        organisation: user.organisation,
-      },
-      (err, docs) => {
-        // User.find((err, docs) => {
-        if (!err) {
-          // req.io.emit("message", docs);
-          // req.io.to("room2").emit("message", docs);
-          res.status(200).send({ status: "200", message: "User List", docs });
-        } else {
-          return res.status(400).send({
-            status: "400",
-            message: "Failed to retrieve the User List: " + err,
-          });
-        }
-      }
-    );
+  const employeeList = await User.find({
+    "organisation_list.role": {
+      $nin: ["admin", "team_leader", "observer", "client", "subadmin"],
+    },
+    "organisation_list.organisation": user.organisation.organisation,
+  });
+
+  const employeeListDetails = [];
+
+  if (employeeList) {
+    // req.io.emit("message", docs);
+    // req.io.to("room2").emit("message", docs);
+    for (let employee of employeeList) {
+      employeeListDetails.push({
+        name: employee.name,
+        email: employee.email,
+        pic: employee.pic,
+      });
+    }
+    return res
+      .status(200)
+      .send({ status: "200", message: "User List", employeeListDetails });
   } else {
-    res.status(400).send({
-      status: 400,
-      message: "Only admin can access this",
+    return res.status(400).send({
+      status: "400",
+      message: "Failed to retrieve the User List",
     });
   }
 };
 
-exports.getTeamLeaderList = (req, res) => {
+exports.getTeamLeaderList = async (req, res) => {
   const user = req.user;
-  // console.log("asda" + req.io);
+  const leaderList = await User.find({
+    "organisation_list.role": "team_leader",
+    "organisation_list.organisation": user.organisation.organisation,
+  });
+  const leaderListDetails = [];
 
-  // if (user.role === "admin") {
-  if (true) {
-    User.find(
-      { role: "team_leader", organisation: user.organisation },
-      (err, docs) => {
-        if (!err) {
-          // req.io.emit("message", docs);
-          // req.io.to("room2").emit("message", docs);
-          res
-            .status(200)
-            .send({ status: "200", message: "Team Leader List", docs });
-        } else {
-          return res.status(400).send({
-            status: "400",
-            message: "Failed to retrieve the User List: " + err,
-          });
-        }
-      }
-    );
+  if (leaderList) {
+    // req.io.emit("message", docs);
+    // req.io.to("room2").emit("message", docs);
+    for (let leader of leaderList) {
+      leaderListDetails.push({
+        name: leader.name,
+        email: leader.email,
+        pic: leader.pic,
+      });
+    }
+    return res
+      .status(200)
+      .send({ status: "200", message: "Team Leader List", leaderListDetails });
   } else {
-    res.status(400).send({
-      status: 400,
-      message: "Only admin can access this",
+    return res.status(400).send({
+      status: "400",
+      message: "Failed to retrieve the User List",
     });
   }
 };
 
-exports.getObserversList = (req, res) => {
+exports.getObserversList = async (req, res) => {
   const user = req.user;
-  console.log("asda" + user.role);
 
-  // if (user.role === "admin") {
-  if (true) {
-    User.find(
-      { role: "observer", organisation: user.organisation },
-      (err, docs) => {
-        if (!err) {
-          // req.io.emit("message", docs);
-          // req.io.to("room2").emit("message", docs);
-          res
-            .status(200)
-            .send({ status: "200", message: "Observer Leader List", docs });
-        } else {
-          return res.status(400).send({
-            status: "400",
-            message: "Failed to retrieve the User List: " + err,
-          });
-        }
-      }
-    );
+  const observerList = await User.find({
+    "organisation_list.role": "observer",
+    "organisation_list.organisation": user.organisation.organisation,
+  });
+  const observerListDetails = [];
+
+  if (observerList) {
+    // req.io.emit("message", docs);
+    // req.io.to("room2").emit("message", docs);
+    for (let observer of observerList) {
+      observerListDetails.push({
+        name: observer.name,
+        email: observer.email,
+        pic: observer.pic,
+      });
+    }
+    return res.status(200).send({
+      status: "200",
+      message: "Observer List",
+      observerListDetails,
+    });
   } else {
-    res.status(400).send({
-      status: 400,
-      message: "Only admin can access this",
+    return res.status(400).send({
+      status: "400",
+      message: "Failed to retrieve the User List",
     });
   }
 };
@@ -904,17 +901,30 @@ exports.getLoginUser = (req, res) => {
 };
 
 exports.changeUserRoles = (req, res) => {
-  const condition = { _id: req.params.id };
+  const user = req.user;
+  const condition = {
+    _id: req.params.id,
+    "organisation_list.organisation": user.organisation.organisation,
+  };
   const role = parseInt(req.body.role);
 
-  if (role >= 3) {
+  if (role >= 6) {
     return res
       .status(400)
       .send({ status: "400", message: "Failed to user Update" });
   }
   let newRole = config.user_role[role];
-  console.log(newRole);
-  User.findOneAndUpdate(condition, { role: newRole })
+
+  User.findByIdAndUpdate(
+    condition,
+    { $set: { "organisation_list.$[element].role": newRole } },
+    {
+      arrayFilters: [
+        { "element.organisation": user.organisation.organisation },
+      ],
+      new: true,
+    }
+  )
     .then((docs) => {
       if (!docs) {
         return res
@@ -923,9 +933,10 @@ exports.changeUserRoles = (req, res) => {
       }
       return res
         .status(200)
-        .send({ status: "200", message: "Succesffully Updated User", docs });
+        .send({ status: "200", message: "Succesffully Updated User" });
     })
     .catch((err) => {
+      console.log(err);
       return res
         .status(400)
         .send({ status: "400", message: "Something went wrong", err });
@@ -939,12 +950,15 @@ exports.userEdit = (req, res) => {
   if (!validationErrors.isEmpty()) {
     return res.status(422).json({
       status: 422,
-      msg: "err",
+      msg: "error",
       validationErrors: validationErrors.array({ onlyFirstError: true }),
     });
   }
 
-  const condition = { _id: user._id, organisation: user.organisation };
+  const condition = {
+    _id: user.id,
+    organisation: user.organisation.organisation,
+  };
   if (req.body.role) {
     return res.status(400).send({ status: "400", message: "Cant update role" });
   }
@@ -969,12 +983,15 @@ exports.userEdit = (req, res) => {
 // Approve or reject user by the admin
 exports.userApproveOrReject = async (req, res) => {
   const user = req.user;
-  if (user.role === "admin" || user.role === "subadmin") {
+  if (
+    user.organisation.role === "admin" ||
+    user.organisation.role === "subadmin"
+  ) {
     try {
       const _id = req.params.id;
-      const body = req.body.status;
+      const body = parseInt(req.body.status);
       let status = "";
-      status = config.user_status[body + ""];
+      status = config.user_status[body];
       // if (body === 1) {
       //   status = "approved";
       // } else if (body === 0) {
@@ -1017,7 +1034,7 @@ exports.userApproveOrReject = async (req, res) => {
 
 exports.forgetPassword = async (req, res) => {
   const email = req.body.email;
-  const sub_domain = req.body.sub_domain;
+  const sub_domain = email.split("@")[1];
 
   let org = await Organisation.findOne({ sub_domain });
   // console.log(org);
@@ -1027,7 +1044,7 @@ exports.forgetPassword = async (req, res) => {
       message: "Organisation not found",
     });
   }
-  User.findOne({ email, organisation: org._id })
+  User.findOne({ email, "organisation_list.organisation": org._id })
     .then(async (docs) => {
       if (!docs) {
         return res
@@ -1051,7 +1068,7 @@ exports.forgetPassword = async (req, res) => {
           .then((result) => {
             return res.status(200).send({
               status: "200",
-              message: "Password reset successfully",
+              message: "Password reset mail sent successfully",
             });
           })
           .catch((err) => {
@@ -1063,7 +1080,7 @@ exports.forgetPassword = async (req, res) => {
       } else {
         return res.status(401).send({
           status: "401",
-          message: "You are not allowed to signIn",
+          message: "Your account is inactive",
         });
       }
     })
@@ -1097,7 +1114,10 @@ exports.changePassword = async (req, res) => {
   //     message: "Organisation not found",
   //   });
   // }
-  User.findOne({ email, organisation: user.organisation })
+  User.findOne({
+    email,
+    "organisation_list.organisation": user.organisation.organisation,
+  })
     .then(async (docs) => {
       if (!docs) {
         return res
@@ -1176,79 +1196,137 @@ exports.allUsers = async (req, res) => {
               { email: { $regex: req.query.search, $options: "i" } },
             ],
           },
-          { organisation: user.organisation, status: "approved" },
+          {
+            "organisation_list.organisation": user.organisation.organisation,
+            status: "approved",
+          },
         ],
       }
     : {};
 
-  const users = await User.find(keyword).find({ _id: { $ne: req.user._id } });
-  res.send(users);
+  const users = await User.find(keyword).find({ _id: { $ne: user.id } });
+  return res
+    .status(200)
+    .send({ code: 200, message: "User List fetched", users });
 };
 
 exports.createObserver = async (req, res) => {
   const user = req.user;
-  if (user.role === "admin" || user.role === "subadmin") {
-    // const { name, email, password, role, pic, status } = req.body;
-
-    // const hashedPassword = await bcrypt.hash(password, 12);
-
+  if (
+    user.organisation.role === "admin" ||
+    user.organisation.role === "subadmin"
+  ) {
     req.body.role = "observer";
     req.body.status = "approved";
-    req.body.organisation = user.organisation;
+    req.body.organisation = user.organisation.organisation;
 
-    console.log(req.body);
-    let userExist = await User.find({
-      email: req.body.email,
-      organisation: user.organisation,
-    });
-    if (userExist.length > 0) {
-      return res.status(400).send({
-        status: "400",
-        message: "User already exist",
-      });
-    }
     try {
-      const newUser = new User(req.body);
-      const result = await newUser.save();
-      res.status(200).send({
-        status: "200",
-        message: "Observer created successfully",
-        result,
+      let userExist = await User.findOne({
+        email: req.body.email,
       });
+      if (userExist !== null) {
+        let existOrNot = false;
+        for (const value of userExist.organisation_list) {
+          if (value.organisation == user.organisation.organisation) {
+            existOrNot = true;
+            break;
+          }
+        }
+
+        if (existOrNot) {
+          return res.status(400).send({
+            status: "400",
+            message: "User is already exist on the organization",
+          });
+        } else {
+          await User.updateOne(
+            { _id: userExist._id },
+            {
+              $push: {
+                organisation_list: {
+                  organisation: user.organisation.organisation,
+                  role: req.body.role,
+                  priority: 1,
+                },
+              },
+            }
+          );
+
+          return res.status(201).send({
+            status: "201",
+            message: "Successfully added User the to Organisation",
+          });
+        }
+      } else {
+        const newUser = new User({
+          email: req.body.email,
+          name: req.body.name,
+          status: req.body.status,
+          organisation_list: [
+            {
+              organisation: user.organisation.organisation,
+              role: req.body.role,
+              priority: 1,
+            },
+          ],
+        });
+        const result = await newUser.save();
+        res.status(201).send({
+          status: "201",
+          message: "Observer created successfully",
+          result,
+        });
+      }
     } catch (err) {
-      res.status(400).send({
-        status: "400",
+      res.status(500).send({
+        status: "500",
         message: "Something went wrong",
         err,
       });
     }
   } else {
-    res.status(400).send({
-      status: 400,
-      message: "Only admin can access this",
+    res.status(401).send({
+      status: 401,
+      message: "Unauthorized user",
     });
   }
 };
 
 exports.getObserver = async (req, res) => {
   const user = req.user;
+  try {
+    const docs = await User.find(
+      {
+        "organisation_list.role": "observer",
+        "organisation_list.organisation": user.organisation.organisation,
+      },
+      {
+        _id: 1,
+        email: 1,
+        name: 1,
+        status: 1,
+        pic: 1,
+      }
+    );
+    if (!docs) {
+      return res.status(400).send({
+        status: "400",
+        message: "No Observer Found",
+      });
+    }
 
-  const docs = await User.find({
-    role: "observer",
-    organisation: user.organisation,
-  });
-  if (!docs) {
-    return res.status(400).send({
-      status: "400",
-      message: "Observer not found",
+    return res.status(200).send({
+      status: "200",
+      message: "Observer fetched successfully",
+      docs,
+    });
+  } catch (err) {
+    return res.status(500).send({
+      status: "500",
+      message: "Failed to Get Observer List",
+      docs,
     });
   }
-
-  res.status(200).send({
-    status: "200",
-    message: "Observer fetched successfully",
-    docs,
-  });
 };
 
 exports.createClient = async (req, res) => {
@@ -1296,6 +1374,7 @@ exports.createClient = async (req, res) => {
       const newUser = new User({
         email: req.body.email,
         name: req.body.name,
+        status: req.body.status,
         organisation_list: [
           {
             organisation: user.organisation.organisation,
@@ -1313,8 +1392,8 @@ exports.createClient = async (req, res) => {
       });
     }
   } catch (err) {
-    res.status(400).send({
-      status: "400",
+    res.status(500).send({
+      status: "500",
       message: "Something went wrong",
     });
   }
@@ -1359,66 +1438,118 @@ exports.getClient = async (req, res) => {
 
 exports.createSubAdmin = async (req, res) => {
   const user = req.user;
-  if (user.role === "admin" || user.role === "subadmin") {
-    // const { name, email, password, role, pic, status } = req.body;
-
-    // const hashedPassword = await bcrypt.hash(password, 12);
-
+  if (
+    user.organisation.role === "admin" ||
+    user.organisation.role === "subadmin"
+  ) {
     req.body.role = "subadmin";
     req.body.status = "approved";
-    req.body.organisation = user.organisation;
+    req.body.organisation = user.organisation.organisation;
 
-    console.log(req.body);
-    let userExist = await User.find({
-      email: req.body.email,
-      organisation: user.organisation,
-    });
-    if (userExist.length > 0) {
-      return res.status(400).send({
-        status: "400",
-        message: "User already exist",
-      });
-    }
     try {
-      const newUser = new User(req.body);
-      const result = await newUser.save();
-      res.status(200).send({
-        status: "200",
-        message: "Sub Admin created successfully",
-        result,
+      let userExist = await User.findOne({
+        email: req.body.email,
       });
+      if (userExist !== null) {
+        let existOrNot = false;
+        for (const value of userExist.organisation_list) {
+          if (value.organisation == user.organisation.organisation) {
+            existOrNot = true;
+            break;
+          }
+        }
+
+        if (existOrNot) {
+          return res.status(400).send({
+            status: "400",
+            message: "User is already exist on the organization",
+          });
+        } else {
+          await User.updateOne(
+            { _id: userExist._id },
+            {
+              $push: {
+                organisation_list: {
+                  organisation: user.organisation.organisation,
+                  role: req.body.role,
+                  priority: 1,
+                },
+              },
+            }
+          );
+
+          return res.status(201).send({
+            status: "201",
+            message: "Sub Admin created successfully",
+          });
+        }
+      } else {
+        const newUser = new User({
+          email: req.body.email,
+          name: req.body.name,
+          status: req.body.status,
+          organisation_list: [
+            {
+              organisation: user.organisation.organisation,
+              role: req.body.role,
+              priority: 1,
+            },
+          ],
+        });
+        const result = await newUser.save();
+        res.status(201).send({
+          status: "201",
+          message: "Sub Admin created successfully",
+          result,
+        });
+      }
     } catch (err) {
-      res.status(400).send({
-        status: "400",
+      res.status(500).send({
+        status: "500",
         message: "Something went wrong",
         err,
       });
     }
   } else {
-    res.status(400).send({
-      status: 400,
-      message: "Only admin can access this",
+    res.status(401).send({
+      status: 401,
+      message: "Unauthorized user",
     });
   }
 };
 
 exports.getSubadmin = async (req, res) => {
   const user = req.user;
+  try {
+    const docs = await User.find(
+      {
+        role: "subadmin",
+        "organisation_list.organisation": user.organisation.organisation,
+      },
+      {
+        _id: 1,
+        email: 1,
+        name: 1,
+        status: 1,
+        pic: 1,
+      }
+    );
+    if (!docs) {
+      return res.status(400).send({
+        status: "400",
+        message: "Subadmin not found",
+      });
+    }
 
-  const docs = await User.find({
-    role: "subadmin",
-    organisation: user.organisation,
-  });
-  if (!docs) {
-    return res.status(400).send({
-      status: "400",
-      message: "Subadmin not found",
+    res.status(200).send({
+      status: "200",
+      message: "Subadmin fetched successfully",
+      docs,
+    });
+  } catch (err) {
+    res.status(500).send({
+      status: "500",
+      message: "Failed to Get Subadmin",
     });
   }
-
-  res.status(200).send({
-    status: "200",
-    message: "Subadmin fetched successfully",
-    docs,
-  });
 };

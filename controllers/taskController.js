@@ -7,27 +7,12 @@ const project = require("../models/project");
 const { validationResult } = require("express-validator");
 const User = require("../models/user");
 const notification = require("../models/notification");
+const { sendMail } = require("../services/sendEmail");
 
 //create task
-exports.createTask = (req, res) => {
+exports.createTask = async (req, res) => {
   let payload = req.body;
   let user = req.user;
-  // const validationErrors = validationResult(req);
-  // if (!validationErrors.isEmpty()) {
-  //   return res.status(422).json({
-  //     status: 422,
-  //     msg: "err",
-  //     validationErrors: validationErrors.array({ onlyFirstError: true }),
-  //   });
-  // }
-
-  // console.log(req.io);
-
-  //attach project list to user socket
-  // req.io.join
-  // console.log(req.io);
-  // projectList.forEach((project) => req.io.join("project:" + project._id));
-  // req.io.to()
 
   // create task_no
   const d = new Date();
@@ -61,7 +46,6 @@ exports.createTask = (req, res) => {
         TaskModel.create(payload)
           .then(async (task) => {
             if (task) {
-              console.log("task", task);
               // payload.task_assignee.forEach((element) => {
               //   Notification.create({
               //     notification: "New Task assigned",
@@ -70,6 +54,34 @@ exports.createTask = (req, res) => {
               //     send_to: element,
               //   });
               // });
+
+              if (task.task_assignee) {
+                if (task.task_assignee.length > 0) {
+                  for (const eachTaskAssignee of task.task_assignee) {
+                    const eachTaskAssigneeData = await User.findOne({
+                      _id: eachTaskAssignee,
+                    });
+                    if (
+                      !eachTaskAssigneeData ||
+                      eachTaskAssigneeData === null
+                    ) {
+                      return res.status(400).send({
+                        status: "400",
+                        message: "User does not exists",
+                      });
+                    }
+
+                    const assigneeMail = eachTaskAssigneeData.email;
+                    const subjects = "Task Created";
+                    const sendMsgs = `
+                        Task_Name: <b>${task.task_name}</b><br>
+                        Task_due_on: <b>${task.task_due_on}</b><br>
+                        Task_priority: <b>${task.task_priority}</b><br>
+                        Task_created_by:<b>${user.name}</b>`;
+                    sendMail(assigneeMail, subjects, sendMsgs);
+                  }
+                }
+              }
 
               // const tasks=TaskM
 
@@ -121,18 +133,16 @@ exports.createTask = (req, res) => {
 //task list
 exports.getTask = async (req, res) => {
   const user = req.user;
-  let query = {};
+  let query = {
+    $and: [
+      {
+        $or: [{ task_assignee: user.id }, { created_by: user.id }],
+      },
+      { organisation: user.organisation.organisation },
+    ],
+  };
   if (user.organisation.role == "admin" || user.organisation.role == "subadmin")
     query = { organisation: user.organisation.organisation };
-  else
-    query = {
-      $and: [
-        {
-          $or: [{ task_assignee: user.id }, { created_by: user.id }],
-        },
-        { organisation: user.organisation.organisation },
-      ],
-    };
 
   // console.log("query", query);
 
@@ -375,7 +385,7 @@ exports.deleteTask = async (req, res) => {
 
 exports.getTaskByUser = (req, res) => {
   const user = req.user;
-  TaskModel.find({ task_assignee: { $in: [user._id] } })
+  TaskModel.find({ task_assignee: { $in: [user.id] } })
     .populate(
       "project_id project_assignee task_assignee ",
       "project_name name pic"
@@ -416,7 +426,10 @@ exports.getTaskById = (req, res) => {
 //task edit
 exports.editTask = (req, res) => {
   const user = req.user;
-  const condition = { _id: req.params.id, organisation: user.organisation };
+  const condition = {
+    _id: req.params.id,
+    organisation: user.organisation.organisation,
+  };
 
   TaskModel.updateOne(condition, req.body)
     .then((docs) => {
@@ -464,7 +477,7 @@ exports.closeTask = async (req, res) => {
   }
 };
 
-exports.changeTaskStatus = (req, res) => {
+exports.changeTaskStatus = async (req, res) => {
   const user = req.user;
   const condition = {
     $and: [
@@ -480,6 +493,7 @@ exports.changeTaskStatus = (req, res) => {
       .send({ status: "400", message: "Failed to Update Task" });
   }
 
+  let allOk = false;
   try {
     if (status === 6) {
       if (
@@ -487,47 +501,83 @@ exports.changeTaskStatus = (req, res) => {
         user.organisation.role === "team_lead" ||
         user.organisation.role === "subadmin"
       ) {
-        TaskModel.findOneAndUpdate(condition, { task_status: status })
-          .then((docs) => {
-            if (!docs) {
-              return res
-                .status(400)
-                .send({ status: "400", message: "Failed to Update Task" });
+        let docs = await TaskModel.findOneAndUpdate(condition, {
+          task_status: status,
+        });
+
+        if (docs.task_assignee) {
+          if (docs.task_assignee.length > 0) {
+            for (const eachTaskAssignee of docs.task_assignee) {
+              const eachTaskAssigneeData = await User.findOne({
+                _id: eachTaskAssignee,
+              });
+              if (
+                eachTaskAssigneeData &&
+                eachTaskAssigneeData._id !== user.id
+              ) {
+                const assigneeMail = eachTaskAssigneeData.email;
+                const subjects = "Task Created";
+                const sendMsgs = `
+                  Task_Name: <b>${docs.task_name}</b><br>
+                  Task_due_on: <b>${docs.task_due_on}</b><br>
+                  Task_priority: <b>${docs.task_priority}</b><br>
+                  Task_status_changed_by:<b>${user.name}</b><br>
+                  Current_task_status:<b>${
+                    config.task_status[docs.task_status]
+                  }</b>`;
+                sendMail(assigneeMail, subjects, sendMsgs);
+              }
             }
-            return res
-              .status(200)
-              .send({ status: "200", message: "Succesffully Updated Task" });
-          })
-          .catch((err) => {
-            return res
-              .status(400)
-              .send({ status: "400", message: "Something went wrong" });
-          });
+          }
+        }
+        allOk = true;
       } else {
         return res.status(400).send({
           status: "400",
           message: "Not Authorized to Change the status to CONFIRMED",
         });
       }
-    }
-
-    TaskModel.findOneAndUpdate(condition, { task_status: status })
-      .then((docs) => {
-        if (!docs) {
-          return res
-            .status(400)
-            .send({ status: "400", message: "Failed to Update Task" });
-        }
-        return res
-          .status(200)
-          .send({ status: "200", message: "Succesffully Updated Task" });
-      })
-      .catch((err) => {
-        return res
-          .status(400)
-          .send({ status: "400", message: "Something went wrong" });
+    } else {
+      let docs = await TaskModel.findOneAndUpdate(condition, {
+        task_status: status,
       });
+
+      if (docs.task_assignee) {
+        if (docs.task_assignee.length > 0) {
+          for (const eachTaskAssignee of docs.task_assignee) {
+            const eachTaskAssigneeData = await User.findOne({
+              _id: eachTaskAssignee,
+            });
+
+            if (eachTaskAssigneeData && eachTaskAssigneeData._id !== user.id) {
+              const assigneeMail = eachTaskAssigneeData.email;
+              const subjects = "Task Status Changed";
+              const sendMsgs = `
+                  Task_Name: <b>${docs.task_name}</b><br>
+                  Task_due_on: <b>${docs.task_due_on}</b><br>
+                  Task_priority: <b>${docs.task_priority}</b><br>
+                  Task_status_changed_by:<b>${user.name}</b><br>
+                  Current_task_status:<b>${
+                    config.task_status[docs.task_status]
+                  }</b>`;
+              sendMail(assigneeMail, subjects, sendMsgs);
+            }
+          }
+        }
+      }
+      allOk = true;
+    }
   } catch (err) {
+    console.log(err, "err");
+    return res
+      .status(500)
+      .send({ status: "500", message: "Something went wrong" });
+  }
+  if (allOk) {
+    return res
+      .status(200)
+      .send({ status: "200", message: "Succesffully Updated Task" });
+  } else {
     return res
       .status(500)
       .send({ status: "500", message: "Something went wrong" });
@@ -536,13 +586,20 @@ exports.changeTaskStatus = (req, res) => {
 
 // task reminder route
 exports.reminderTask = async (req, res) => {
+  const user = req.user;
   const _id = req.params.id;
   try {
     const result = await TaskModel.findById(_id);
-    // const decode_token = jwt.verify(req.cookies.token, process.env.SECRET);
+
+    if (result.task_status === 4 || result.task_status === 6) {
+      return res.status(400).send({
+        status: 400,
+        message: "This Task is already completed",
+      });
+    }
 
     result.task_assignee.forEach((element) => {
-      if (user._id != element) {
+      if (user.id != element) {
         Notification.create({
           notification: "Please complete the task immediately",
           status: "UNREAD",
@@ -579,30 +636,26 @@ exports.addTaskComment = async (req, res) => {
   let obj = {};
   if (comment) obj.comment = comment;
 
-  obj.user = user._id;
-
-  if (req.files && req.files.file) {
-    obj.type = "attachment";
-    obj.contentType = req.files.file.mimetype;
-
-    req.files.file.mv(
-      `${__dirname}/../public/images/${req.files.file.name}`,
-      (err) => {
-        console.log(err);
-      }
-    );
-    obj.file = `/images/${req.files.file.name}`;
-  }
-
+  obj.user = user.id;
   try {
+    if (req.files && req.files.file) {
+      obj.type = "attachment";
+      obj.contentType = req.files.file.mimetype;
+
+      req.files.file.mv(
+        `${__dirname}/../public/images/${req.files.file.name}`,
+        (err) => {
+          if (err) console.log(err);
+        }
+      );
+      obj.file = `/images/${req.files.file.name}`;
+    }
+
     TaskModel.findByIdAndUpdate(
       { _id: id },
-      // { $push: { comments: { comment: obj, user: user._id } } },
       { $push: { comments: obj } },
-      { new: true }
-    )
-      // .populate("comments.user", "name")
-      .exec((err, docs) => {
+      { new: true },
+      (err, docs) => {
         if (!err) {
           return res
             .status(200)
@@ -612,7 +665,8 @@ exports.addTaskComment = async (req, res) => {
             .status(500)
             .send({ status: 500, message: "Failed to add comment" });
         }
-      });
+      }
+    );
   } catch (error) {
     return res
       .status(500)

@@ -1,5 +1,6 @@
 const busboy = require("busboy");
 const projectModel = require("../models/project");
+const User = require("../models/user");
 const taskModel = require("../models/task");
 const fs = require("fs");
 const notification = require("../models/notification");
@@ -37,7 +38,34 @@ exports.createProject = async (req, res) => {
 
     projectModel
       .create(req.body)
-      .then((project) => {
+      .then(async (project) => {
+        if (project.project_assignee) {
+          if (project.project_assignee.length > 0) {
+            for (const eachProjectAssignee of project.project_assignee) {
+              const eachProjectAssigneeData = await User.findOne({
+                _id: eachProjectAssignee,
+              });
+              if (
+                !eachProjectAssigneeData ||
+                eachProjectAssigneeData === null
+              ) {
+                return res.status(400).send({
+                  status: "400",
+                  message: "User does not exists",
+                });
+              }
+
+              const assigneeMail = eachProjectAssigneeData.email;
+              const subjects = "Project Created";
+              const sendMsgs = `
+                Project_Name: <b>${project.project_name}</b><br>
+                Project_due_on: <b>${project.project_due_on}</b><br>
+                Project_priority: <b>${project.project_priority}</b><br>
+                Project_created_by: <b>${user.name}</b>`;
+              sendMail(assigneeMail, subjects, sendMsgs);
+            }
+          }
+        }
         if (project) {
           return res
             .status(200)
@@ -624,4 +652,103 @@ exports.deleteProjectAttachment = async (req, res) => {
         });
       });
   });
+};
+
+exports.projectEfficiency = async (req, res) => {
+  const user = req.user;
+
+  taskModel.find({ project_id: req.params.id }, "task_status", (err, docs) => {
+    if (!err) {
+      let obj = {
+        active: 0,
+        in_progress: 0,
+        qa: 0,
+        completed: 0,
+        backlogs: 0,
+        confirmed: 0,
+      };
+      for (var i = 0; i < docs.length; i++) {
+        switch (docs[i].task_status + "") {
+          case "1":
+            obj.active = obj.active + 1;
+            break;
+          case "2":
+            obj.in_progress = obj.in_progress + 1;
+            break;
+          case "3":
+            obj.qa = obj.qa + 1;
+            break;
+          case "4":
+            obj.completed = obj.completed + 1;
+            break;
+          case "5":
+            obj.backlogs = obj.backlogs + 1;
+            break;
+          case "6":
+            obj.confirmed = obj.confirmed + 1;
+            break;
+        }
+      }
+      let totalTask =
+        obj.active + obj.in_progress + obj.qa + obj.completed + obj.confirmed;
+      let efficiency = Math.round((obj.confirmed / totalTask) * 100);
+
+      return res.status(200).send({
+        status: "200",
+        message: "Project Efficiency",
+        projectEfficiency: efficiency,
+      });
+    } else {
+      return res.status(500).send({
+        status: "500",
+        message: "Failed to retrieve the task List. Try again later",
+      });
+    }
+  });
+};
+
+exports.totalProjectEfficiency = async (req, res) => {
+  const user = req.user;
+
+  const getProjectList = projectModel.find({
+    organisation: user.organisation.organisation,
+  });
+  if (getProjectList.length > 0) {
+    let obj = {
+      active: 0,
+      completed: 0,
+      hold: 0,
+      inactive: 0,
+    };
+    for (var i = 0; i < getProjectList.length; i++) {
+      switch (getProjectList[i].project_status) {
+        case "ACTIVE":
+          obj.active = obj.active + 1;
+          break;
+        case "HOLD":
+          obj.hold = obj.hold + 1;
+          break;
+        case "COMPLETED":
+          obj.completed = obj.completed + 1;
+          break;
+        case "INACTIVE":
+          obj.inactive = obj.inactive + 1;
+          break;
+      }
+    }
+
+    let totalProject = obj.active + obj.hold + obj.completed;
+    let efficiency = Math.round((obj.completed / totalProject) * 100);
+
+    return res.status(200).send({
+      status: "200",
+      message: "Total Project Efficiency",
+      projectEfficiency: efficiency,
+    });
+  } else {
+    return res.status(500).send({
+      status: "500",
+      message: "Failed to retrieve the Project List. Try again later",
+    });
+  }
 };

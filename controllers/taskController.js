@@ -504,33 +504,9 @@ exports.changeTaskStatus = async (req, res) => {
         let docs = await TaskModel.findOneAndUpdate(condition, {
           task_status: status,
         });
-
-        if (docs.task_assignee) {
-          if (docs.task_assignee.length > 0) {
-            for (const eachTaskAssignee of docs.task_assignee) {
-              const eachTaskAssigneeData = await User.findOne({
-                _id: eachTaskAssignee,
-              });
-              if (
-                eachTaskAssigneeData &&
-                eachTaskAssigneeData._id !== user.id
-              ) {
-                const assigneeMail = eachTaskAssigneeData.email;
-                const subjects = "Task Created";
-                const sendMsgs = `
-                  Task_Name: <b>${docs.task_name}</b><br>
-                  Task_due_on: <b>${docs.task_due_on}</b><br>
-                  Task_priority: <b>${docs.task_priority}</b><br>
-                  Task_status_changed_by:<b>${user.name}</b><br>
-                  Current_task_status:<b>${
-                    config.task_status[docs.task_status]
-                  }</b>`;
-                sendMail(assigneeMail, subjects, sendMsgs);
-              }
-            }
-          }
+        if (docs) {
+          allOk = true;
         }
-        allOk = true;
       } else {
         return res.status(400).send({
           status: "400",
@@ -542,30 +518,9 @@ exports.changeTaskStatus = async (req, res) => {
         task_status: status,
       });
 
-      if (docs.task_assignee) {
-        if (docs.task_assignee.length > 0) {
-          for (const eachTaskAssignee of docs.task_assignee) {
-            const eachTaskAssigneeData = await User.findOne({
-              _id: eachTaskAssignee,
-            });
-
-            if (eachTaskAssigneeData && eachTaskAssigneeData._id !== user.id) {
-              const assigneeMail = eachTaskAssigneeData.email;
-              const subjects = "Task Status Changed";
-              const sendMsgs = `
-                  Task_Name: <b>${docs.task_name}</b><br>
-                  Task_due_on: <b>${docs.task_due_on}</b><br>
-                  Task_priority: <b>${docs.task_priority}</b><br>
-                  Task_status_changed_by:<b>${user.name}</b><br>
-                  Current_task_status:<b>${
-                    config.task_status[docs.task_status]
-                  }</b>`;
-              sendMail(assigneeMail, subjects, sendMsgs);
-            }
-          }
-        }
+      if (docs) {
+        allOk = true;
       }
-      allOk = true;
     }
   } catch (err) {
     console.log(err, "err");

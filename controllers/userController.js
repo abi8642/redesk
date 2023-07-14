@@ -804,6 +804,7 @@ exports.getEmployeeList = async (req, res) => {
     // req.io.to("room2").emit("message", docs);
     for (let employee of employeeList) {
       employeeListDetails.push({
+        id: employee._id,
         name: employee.name,
         email: employee.email,
         pic: employee.pic,

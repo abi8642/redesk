@@ -8,6 +8,7 @@ const taskSchema = new mongoose.Schema(
     },
     task_no: {
       type: String,
+      required: true,
     },
     task_description: {
       type: String,
@@ -54,6 +55,11 @@ const taskSchema = new mongoose.Schema(
         "COMPLETED",
         "CONFIRMED",
         "APPROVED BY CLIENT",
+        "OPEN",
+        "RE-OPEN",
+        "PENDING RE-TEST",
+        "RE-TEST",
+        "CLOSED",
       ],
       required: true,
     },

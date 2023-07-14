@@ -1,6 +1,5 @@
 require("dotenv").config();
 const mongoose = require("mongoose");
-// const User = require("../models/user");
 
 mongoose.set("strictQuery", false);
 mongoose.set("useCreateIndex", true);
@@ -18,7 +17,7 @@ db_conn().catch((e) => {
 });
 
 async function db_conn() {
-  await mongoose.connect(uri, {
+  await mongoose.connect(localUri, {
     useUnifiedTopology: true,
     useNewUrlParser: true,
     useFindAndModify: false,

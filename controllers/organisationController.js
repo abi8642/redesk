@@ -3,37 +3,15 @@ const jwt = require("jsonwebtoken");
 const { sendMail } = require("../services/sendEmail");
 const config = require("../config/config");
 const Organisation = require("../models/organisation");
-const crypto = require("crypto");
-const uuidv1 = require("uuid/v1");
 const Project = require("../models/project");
 const Task = require("../models/task");
 const xlsx = require("xlsx");
 
 exports.createOrganisation = async (req, res) => {
-  // Check whether email already exists
-  const {
-    // sub_domain,
-    organisation_name,
-    organisation_email,
-    organisation_website,
-    organisation_address,
-    email,
-    name,
-    password,
-  } = req.body;
+  const { email, name } = req.body;
 
-  // const result = await User.findOne({
-  //   email: req.body.email,
-  //   sub_domain: sub_domain,
-  // });
-  // if (result) {
-  //   return res.status(400).send({
-  //     status: "400",
-  //     message: "Email already exists",
-  //   });
-  // }
-  // console.log(req.body);
   try {
+    // Check whether email already exists
     const emailExistsOrNot = await User.findOne({ email: email });
     if (emailExistsOrNot) {
       return res.status(400).send({
@@ -43,18 +21,6 @@ exports.createOrganisation = async (req, res) => {
     }
 
     let sub_domain = email.split("@")[1];
-    // if (
-    //   sub_domain == "gmail.com" ||
-    //   sub_domain == "yahoo.com" ||
-    //   sub_domain == "hotmail.com" ||
-    //   sub_domain == "outlook.com" ||
-    //   sub_domain == "live.com"
-    // ) {
-    //   return res.status(400).send({
-    //     status: "400",
-    //     message: "Invalid Email",
-    //   });
-    // }
 
     if (!sub_domain) {
       return res.status(400).send({
@@ -62,15 +28,14 @@ exports.createOrganisation = async (req, res) => {
         message: "Invalid Email",
       });
     }
+    // Check whether the organization already exists
     const orgsExistOrNot = await Organisation.findOne({
       sub_domain: sub_domain,
     });
     if (orgsExistOrNot) {
-      // console.log(orgsExistOrNot, "asdasdas");
       let user = new User({
         name: name,
         email: email,
-        // password: password,
         organisation_list: [
           {
             organisation: orgsExistOrNot._id,
@@ -79,7 +44,6 @@ exports.createOrganisation = async (req, res) => {
           },
         ],
         status: "approved",
-        // role: "user",
       });
       user.save((err, user) => {
         if (err) {
@@ -92,15 +56,9 @@ exports.createOrganisation = async (req, res) => {
         return res.status(201).send({
           status: "201",
           message: "Successfully added User to  Organisation",
-          // organisation: {
-          //   id: orgsExistOrNot._id,
-          //   sub_domain: orgsExistOrNot.sub_domain,
-          //   organisation_name: orgsExistOrNot.organisation_name,
-          // },
         });
       });
     } else {
-      // console.log(orgsExistOrNot, "asdasdas21");
       jwt.sign(
         { email, name },
         process.env.ACCOUNT_ACTIVATION,
@@ -116,18 +74,10 @@ exports.createOrganisation = async (req, res) => {
             });
           }
 
-          // transporter.sendMail({
-          //   from: "invite@apptimates.com",
-          //   to: email,
-          //   subject: "Please set up your account for Redesk",
-          //   text: `Please click on the link to set up your account for ${
-          //     email.split("@")[1]
-          //   } at Redesk. Click the link to verify your account. https://redesk.in/registerOrgs?token=${emailToken}&email=${email}&name=${name}`,
-          // });
           try {
             sendMail(
               email,
-              "Please set up your account for Redesk",
+              "Set up your account",
               `Please click on the link to set up your account for ${
                 email.split("@")[1]
               } at Redesk. Click the link to verify your account. https://dev.redesk.in/registerOrgs?token=${emailToken}&email=${email}`
@@ -153,78 +103,6 @@ exports.createOrganisation = async (req, res) => {
       message: "Something went wrong" + err,
     });
   }
-
-  // Organisation.findOne({ sub_domain }, (err, org) => {
-  //   if (err || org) {
-  //     // console.log(err);
-  //     return res
-  //       .status(400)
-  //       .send({ status: "400", message: "Company subdomain already exists" });
-  //   }
-
-  // If email don't exist, create user
-  //   req.body.status = "pending";
-  //   req.body.role = "admin";
-  //   const organisation = new Organisation(req.body);
-  //   organisation.save((err, organisation) => {
-  //     if (err) {
-  //       return res.status(400).send({
-  //         status: "500",
-  //         message: "Unable to signup. Try again later",
-  //         err,
-  //       });
-  //     }
-
-  //     req.body.organisation = organisation._id;
-  //     console.log(organisation);
-  //     const user = new User(req.body);
-  //     user.save((err, user) => {
-  //       if (err) {
-  //         return res.status(400).send({
-  //           status: "500",
-  //           message: "Unable to signup. Try again later",
-  //           err,
-  //         });
-  //       }
-
-  //       console.log(user);
-
-  //       jwt.sign(
-  //         { _id: user._id, organisation: organisation._id },
-  //         process.env.ACCOUNT_ACTIVATION,
-  //         {
-  //           expiresIn: "1d",
-  //         },
-  //         (err, emailToken) => {
-  //           if (err) {
-  //             return res.status(400).send({
-  //               status: "500",
-  //               message: "Unable to signup. Try again later",
-  //               err,
-  //             });
-  //           }
-
-  //           transporter.sendMail({
-  //             from: "invite@apptimates.com",
-  //             to: user.email,
-  //             subject: "Please set up your account for Redesk",
-  //             text: `Please click on the link to set up your account for ${organisation.organisation_name} at Redesk Click the link to verify your account. https://redesk.in/verified?token=${emailToken}`,
-  //           });
-
-  //           return res.status(201).send({
-  //             status: "201",
-  //             message: "Successfully added Organisation",
-  //             organisation: {
-  //               id: organisation._id,
-  //               sub_domain: organisation.sub_domain,
-  //               organisation_name: organisation.organisation_name,
-  //             },
-  //           });
-  //         }
-  //       );
-  //     });
-  //   });
-  // });
 };
 
 // After register user will get a link on the mail. Using the link and "createOrganisationfromEmail" api to create an organization and add the user as an admin to the organization
@@ -276,7 +154,6 @@ exports.createOrganisationfromEmail = async (req, res) => {
   }
 };
 
-// **********************************************************
 // exports.verifyOrganisation = (req, res) => {
 //   const { token } = req.query;
 //   if (token) {
@@ -330,7 +207,6 @@ exports.createOrganisationfromEmail = async (req, res) => {
 //     });
 //   }
 // };
-// **********************************************************
 
 exports.checkSubDomain = (req, res) => {
   const { sub_domain } = req.body;
@@ -606,77 +482,7 @@ exports.verifyInvitation = async (req, res) => {
   }
 };
 
-// let final_arr = [],
-//   promises = [];
-// for (let i = 0; i < email_arr.length; i++) {
-//   let pass = Math.random().toString(36).slice(2, 10);
-
-//   const mailOptions = {
-//     from: "subhadev1289@gmail.com",
-//     to: email_arr[i].email,
-//     subject: "Your Account is up for Redesk",
-//     text: `Your password is ${pass}`,
-//   };
-
-//   let salt = uuidv1();
-//   let encry_password = "";
-//   try {
-//     encry_password = crypto
-//       .createHmac("sha256", salt)
-//       .update(pass + "")
-//       .digest("hex");
-//   } catch (e) {
-//     console.log(e);
-//     encry_password = "";
-//   }
-//   final_arr.push({
-//     firstName: email_arr[i].firstName,
-//     lastName: email_arr[i].lastName,
-//     email: email_arr[i].email,
-//     salt: salt,
-//     encry_password: encry_password,
-//     organisation: organisation_id,
-//   });
-
-//   promises.push(
-//     new Promise(function (resolve, reject) {
-//       transporter.sendMail(mailOptions, function (err, info) {
-//         if (err) {
-//           reject(err);
-//         } else resolve(info);
-//       });
-//     })
-//   );
-// }
-// console.log(final_arr);
-// const user = await User.insertMany(final_arr, { upsert: true });
-// console.log(user);
-// const mailOptions2 = {
-//   from: "user@gmail.com",
-//   to: "test1@gmail.com",
-//   subject: "LOL due",
-//   text: "Dudes, we really need your money.",
-// };
-
-// Promise.all(promises)
-//   .then((r) => {
-//     return res.status(201).send({
-//       status: "201",
-//       message: "Invite Sent",
-//       data: r,
-//     });
-//   })
-//   .catch((err) =>
-//     res.status(201).send({
-//       status: "500",
-//       message: "Something went wrong",
-//       error: err,
-//     })
-//   );
-// };
-
 //organisation list
-
 exports.getOrganisationList = (req, res) => {
   Organisation.find({ status: "approved" }, (err, orgs) => {
     if (orgs) {

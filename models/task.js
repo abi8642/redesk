@@ -6,7 +6,6 @@ const taskSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-
     task_no: {
       type: String,
     },
@@ -14,17 +13,6 @@ const taskSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    // task_attachment: {
-    //   type: String,
-    // },
-    // task_subscribers: {
-    //   type: String,
-    // },
-    // task_list: {
-    //   type: String,
-    //   enum: ["To Do", "Doing", "Client Review", "Done"],
-    //   required: true,
-    // },
     task_status: {
       type: Number,
       // enum: ["ACTIVE", "HOLD", "COMPLETED"],
@@ -49,7 +37,6 @@ const taskSchema = new mongoose.Schema(
       ref: "Organisation",
       required: true,
     },
-
     task_due_on: {
       type: String,
       required: true,
@@ -97,7 +84,6 @@ const taskSchema = new mongoose.Schema(
         },
         comment: {
           type: String,
-          //required: true,
         },
         file: {
           type: String,

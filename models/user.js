@@ -1,19 +1,9 @@
 const mongoose = require("mongoose");
 const crypto = require("crypto");
-const uuidv1 = require("uuid/v1");
+const { uuidv4 } = require("uuid");
 
 const userSchema = new mongoose.Schema(
   {
-    // firstName: {
-    //   type: String,
-    //   required: true,
-    //   trim: true,
-    // },
-    // lastName: {
-    //   type: String,
-    //   required: true,
-    //   trim: true,
-    // },
     name: {
       type: String,
       required: true,
@@ -36,21 +26,13 @@ const userSchema = new mongoose.Schema(
 
     encry_password: {
       type: String,
-      // required: true,
     },
-    salt: String,
-    // role: {
-    //   type: String,
-    //   default: "user",
-    //   enum: ["user", "admin", "team_leader", "client", "observer", "subadmin"],
-    // },
+    salt: {
+      type: String,
+    },
     status: {
       type: String,
       default: "approved",
-    },
-    organisation: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Organisation",
     },
     organisation_list: [
       {
@@ -75,7 +57,6 @@ const userSchema = new mongoose.Schema(
     ],
     phone: {
       type: String,
-      // required: true,
     },
   },
   { timestamps: true }
@@ -85,15 +66,12 @@ userSchema
   .virtual("password")
   .set(function (password) {
     this._password = password;
-    this.salt = uuidv1();
+    this.salt = uuidv4();
     this.encry_password = this.securePassword(password);
   })
   .get(function () {
     return this._password;
   });
-// userSchema.virtual("name").set(function () {
-//   return `asass`;
-// });
 
 userSchema.methods = {
   authenticate: function (plainpassword) {

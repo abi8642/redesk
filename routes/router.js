@@ -22,7 +22,6 @@ const {
   signupwithorgs,
   getEmployeeList,
   allUsers,
-  getObserversList,
   createClient,
   getClient,
   createObserver,
@@ -64,6 +63,8 @@ const {
   addProjectAttachment,
   changeProjectStatus,
   deleteProjectAttachment,
+  projectEfficiency,
+  totalProjectEfficiency,
 } = require("../controllers/projectController");
 const { createRole, getRole } = require("../controllers/roleController");
 const {
@@ -127,26 +128,21 @@ router.post(
 );
 router.post("/verifyEmailInvite", verifyInvitation);
 router.get("/getdashboarddetails", requiredAuth(), getDashboardDetails);
-
 router.post("/createCategory", requiredAuth(), createCategory);
 router.post("/editCategory", requiredAuth(), editCategory);
 router.get("/categoryList", requiredAuth(), allCategories);
-
-// router.get("/",)
-
 router.post("/sendOtp", sendOtp);
 router.post("/verifyOtp", verifyOtp);
 router.post("/selectOrganization", selectOrganization);
 router.post("/requestToken", requestToken);
 
-//user create
+//user apis
 router.post("/signup", signupValidation, signup);
 router.post("/signupwithorgs", signupValidation, signupwithorgs);
 router.post("/signin", loginValidation, signin);
 router.post("/signinwithorgs", loginValidation, signinwithorgs);
 router.get("/loggedInUser", requiredAuth(), getLoginUser);
 router.get("/signout", requiredAuth(), signout);
-
 router.get("/allUserFromOrgs", requiredAuth(), allUserFromOrgs);
 router.get("/userList", requiredAuth(["admin", "subadmin"]), getUser);
 router.get(
@@ -155,7 +151,6 @@ router.get(
   userDetails
 );
 router.get("/teamLeader", requiredAuth(), getTeamLeaderList);
-// router.get("/observerlist", requiredAuth(), getObserversList);
 router.get("/employeeList", requiredAuth(), getEmployeeList);
 router.put("/editUser", requiredAuth(), userEdit);
 router.post(
@@ -168,7 +163,6 @@ router.post(
   requiredAuth(["admin", "subadmin"]),
   userApproveOrReject
 );
-
 router.post(
   "/createobserver",
   requiredAuth(["admin", "subadmin"]),
@@ -181,7 +175,6 @@ router.put(
   param("id").notEmpty(),
   userEdit
 );
-
 router.post(
   "/createsubadmin",
   requiredAuth(["admin", "subadmin"]),
@@ -194,7 +187,6 @@ router.put(
   param("id").notEmpty(),
   userEdit
 );
-
 router.post("/createclient", requiredAuth(["admin", "subadmin"]), createClient);
 router.get("/clientList", requiredAuth(), getClient);
 router.put("/editClient/:id", requiredAuth(), param("id").notEmpty(), userEdit);
@@ -206,7 +198,6 @@ router.get("/taskListByProject/:id", requiredAuth(), getTaskByProject);
 router.post("/taskArray", requiredAuth(), getTaskArray);
 router.get("/taskArrayByProject/:id", requiredAuth(), getTaskArray);
 router.delete("/task/:id", requiredAuth(), deleteTask);
-
 router.get("/taskListByUser", requiredAuth(), getTaskByUser);
 router.get("/task/:id", requiredAuth(), getTaskById);
 router.put("/taskEdit/:id", requiredAuth(), editTask);
@@ -262,6 +253,10 @@ router.put(
   requiredAuth(["admin", "subadmin"]),
   assignTeamLeader
 );
+// Calculate project efficiency api
+router.get("/projectEfficiency/:id", requiredAuth(), projectEfficiency);
+// Calculate total project efficiency api
+router.get("/projectEfficiency", requiredAuth(), totalProjectEfficiency);
 
 //create role
 router.post("/role", requiredAuth(), createRole);
@@ -303,6 +298,6 @@ router.post("/createFolder", requiredAuth(), createFolder);
 router.get("/folderList", requiredAuth(), folderList);
 router.get("/fileList", requiredAuth(), fileList);
 router.post("/upload", requiredAuth(), uploadFile);
-
 router.post("/requestFile", requiredAuth(), requestFile);
+
 module.exports = router;

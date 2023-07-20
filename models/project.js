@@ -39,7 +39,6 @@ const projectSchema = new Schema(
     },
     project_completion_date: {
       type: String,
-      default: "",
     },
     project_status: {
       type: String,

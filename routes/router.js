@@ -87,6 +87,7 @@ const {
   editCategory,
   allCategories,
   createOrganisationfromEmail,
+  getLogsByOrg,
 } = require("../controllers/organisationController");
 const {
   allMessages,
@@ -135,6 +136,7 @@ router.post("/sendOtp", sendOtp);
 router.post("/verifyOtp", verifyOtp);
 router.post("/selectOrganization", selectOrganization);
 router.post("/requestToken", requestToken);
+router.get("/getLogs", requiredAuth(), getLogsByOrg);
 
 //user apis
 router.post("/signup", signupValidation, signup);
@@ -150,8 +152,16 @@ router.get(
   requiredAuth(["admin", "subadmin"]),
   userDetails
 );
-router.get("/teamLeader", requiredAuth(), getTeamLeaderList);
-router.get("/employeeList", requiredAuth(), getEmployeeList);
+router.get(
+  "/teamLeader",
+  requiredAuth(["admin", "subadmin", "team_leader"]),
+  getTeamLeaderList
+);
+router.get(
+  "/employeeList",
+  requiredAuth(["admin", "subadmin", "team_leader"]),
+  getEmployeeList
+);
 router.put("/editUser", requiredAuth(), userEdit);
 router.post(
   "/changeUserRoles/:id",

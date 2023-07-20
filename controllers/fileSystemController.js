@@ -3,11 +3,11 @@ const Folder = require("../models/FolderSystem");
 const fs = require("fs");
 const busboy = require("busboy");
 const os = require("os");
-
 var path = require("path");
+
 exports.createFolder = async (req, res) => {
-  const user = req.user;
   try {
+    const user = req.user;
     const { folderName, parent } = req.body;
 
     let parentList = [];

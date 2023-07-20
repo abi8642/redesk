@@ -1,6 +1,7 @@
 const Chat = require("../models/chatModel");
 const Message = require("../models/messageModel");
 const User = require("../models/user");
+
 exports.allMessages = async (req, res) => {
   try {
     const messages = await Message.find({ chat: req.params.chatId })

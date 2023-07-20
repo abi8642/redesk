@@ -744,75 +744,157 @@ exports.assignTeamLeader = async (req, res) => {
   }
 };
 
+// exports.addProjectAttachment = async (req, res) => {
+//   const user = req.user;
+//   const project = await projectModel.findById(req.params.id);
+//   if (project.organisation + "" != user.organisation.organisation + "") {
+//     // console.log(project.organisation == user.organisation);
+//     // console.log(typeof user.organisation);
+//     return res.status(401).send({
+//       status: 401,
+//       message: "Enter project of your organisation",
+//     });
+//   }
+//   // console.log(req.body);
+//   // console.log("ADsad");
+//   let title = req.body.title;
+
+//   // if (req.files && req.files.file) {
+//   // let fileName=
+//   let dir = `${__dirname}/../public/attachments/${req.params.id}`;
+
+//   if (!fs.existsSync(dir)) {
+//     fs.mkdirSync(dir, { recursive: true });
+//   }
+//   // req.files.file.mv(`${dir}/${req.files.file.name}`, (err) => {
+//   //   console.log(err);
+//   // });
+
+//   const bb = busboy({ headers: req.headers });
+//   console.log(bb, "bb");
+//   let filename;
+//   bb.on("file", (name, file, info) => {
+//     // let { filename, encoding, mimeType } = info;
+//     filename = info.filename;
+//     console.log(info);
+//     let downloaded = 0;
+//     // const saveTo = path.join(".", filename);
+//     const saveTo = `${dir}/${filename}`;
+//     // console.log(saveTo);
+//     file.pipe(fs.createWriteStream(saveTo));
+//     file.on("data", (chunk) => {});
+//   });
+//   bb.on("close", () => {
+//     let path = `/attachments/${req.params.id}/${filename}`;
+//     if (!title) {
+//       title = filename;
+//     }
+//     projectModel
+//       .updateMany(
+//         { _id: req.params.id },
+//         { $addToSet: { project_attachments: { title: title, url: path } } }
+//       )
+//       .then((docs) => {
+//         if (!docs) {
+//           return res
+//             .status(400)
+//             .send({ status: "400", message: "Failed to Update" });
+//         }
+//         return res.status(200).send({
+//           status: "200",
+//           message: "Succesffully Updated Project",
+//           docs,
+//         });
+//       });
+
+//     // res.writeHead(200, { Connection: "close" });
+//     // res.end(`That's all folks!`);
+//   });
+//   req.pipe(bb);
+// };
+
 exports.addProjectAttachment = async (req, res) => {
   const user = req.user;
-  const project = await projectModel.findById(req.params.id);
-  if (project.organisation + "" != user.organisation.organisation + "") {
-    // console.log(project.organisation == user.organisation);
-    // console.log(typeof user.organisation);
-    return res.status(401).send({
-      status: 401,
-      message: "Enter project of your organisation",
+  const projectId = req.params.id;
+
+  try {
+    const project = await projectModel.findById(projectId);
+
+    if (
+      !project ||
+      project.organisation.toString() !==
+        user.organisation.organisation.toString()
+    ) {
+      return res.status(401).json({
+        status: 401,
+        message: "Enter project of your organisation",
+      });
+    }
+
+    // Check if a file was uploaded
+    if (!req.files || !req.files.file) {
+      return res.status(400).json({
+        status: 400,
+        message: "No file uploaded.",
+      });
+    }
+
+    // Handle the file upload
+    const uploadedFile = req.files.file;
+    const dir = `${__dirname}/../public/attachments/${projectId}`;
+    const filePath = `${dir}/${uploadedFile.name}`;
+
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+
+    uploadedFile.mv(filePath, (err) => {
+      if (err) {
+        return res.status(500).json({
+          status: 500,
+          message: "Failed to upload file.",
+        });
+      }
+
+      // Use the filePath to create the URL for the attachment
+      const url = `/attachments/${projectId}/${uploadedFile.name}`;
+
+      // Get the title from the request body or use the original filename as the title
+      const title = req.body.title || uploadedFile.name;
+
+      // Update the project with the attachment details
+      projectModel
+        .updateMany(
+          { _id: projectId },
+          { $addToSet: { project_attachments: { title, url } } }
+        )
+        .then((docs) => {
+          if (!docs) {
+            return res.status(400).json({
+              status: 400,
+              message: "Failed to Update",
+            });
+          }
+          return res.status(200).json({
+            status: 200,
+            message: "Successfully Updated Project",
+            docs,
+          });
+        })
+        .catch((error) => {
+          return res.status(500).json({
+            status: 500,
+            message: "Failed to update project.",
+          });
+        });
+    });
+  } catch (error) {
+    return res.status(500).json({
+      status: 500,
+      message: "Failed to find project.",
     });
   }
-  // console.log(req.body);
-  // console.log("ADsad");
-  let title = req.body.title;
-
-  // if (req.files && req.files.file) {
-  // let fileName=
-  let dir = `${__dirname}/../public/attachments/${req.params.id}`;
-
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-  // req.files.file.mv(`${dir}/${req.files.file.name}`, (err) => {
-  //   console.log(err);
-  // });
-
-  const bb = busboy({ headers: req.headers });
-  console.log(bb, "bb");
-  let filename;
-  bb.on("file", (name, file, info) => {
-    // let { filename, encoding, mimeType } = info;
-    filename = info.filename;
-    console.log(info);
-    let downloaded = 0;
-    // const saveTo = path.join(".", filename);
-    const saveTo = `${dir}/${filename}`;
-    // console.log(saveTo);
-    file.pipe(fs.createWriteStream(saveTo));
-    file.on("data", (chunk) => {});
-  });
-  bb.on("close", () => {
-    let path = `/attachments/${req.params.id}/${filename}`;
-    if (!title) {
-      title = filename;
-    }
-    projectModel
-      .updateMany(
-        { _id: req.params.id },
-        { $addToSet: { project_attachments: { title: title, url: path } } }
-      )
-      .then((docs) => {
-        if (!docs) {
-          return res
-            .status(400)
-            .send({ status: "400", message: "Failed to Update" });
-        }
-        return res.status(200).send({
-          status: "200",
-          message: "Succesffully Updated Project",
-          docs,
-        });
-      });
-
-    // res.writeHead(200, { Connection: "close" });
-    // res.end(`That's all folks!`);
-  });
-  req.pipe(bb);
 };
-
 exports.deleteProjectAttachment = async (req, res) => {
   try {
     const user = req.user;

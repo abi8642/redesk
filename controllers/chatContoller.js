@@ -1,6 +1,7 @@
 const Chat = require("../models/chatModel");
 const Message = require("../models/messageModel");
 const User = require("../models/user");
+
 exports.accessChat = async (req, res) => {
   const { userId } = req.body;
 

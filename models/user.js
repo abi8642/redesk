@@ -23,16 +23,11 @@ const userSchema = new mongoose.Schema(
       default:
         "https://icon-library.com/images/anonymous-avatar-icon/anonymous-avatar-icon-25.jpg",
     },
-
     encry_password: {
       type: String,
     },
     salt: {
       type: String,
-    },
-    status: {
-      type: String,
-      default: "approved",
     },
     organisation_list: [
       {
@@ -53,10 +48,14 @@ const userSchema = new mongoose.Schema(
             "subadmin",
           ],
         },
+        status: {
+          type: String,
+          default: "approved",
+        },
       },
     ],
     phone: {
-      type: String,
+      type: Number,
     },
   },
   { timestamps: true }

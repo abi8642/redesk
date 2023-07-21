@@ -10,8 +10,8 @@ const logsSchema = new Schema({
     type: String,
     required: true,
   },
-  document_id: {
-    type: String,
+  document_data: {
+    type: Object,
     required: true,
   },
   message: {
@@ -24,9 +24,8 @@ const logsSchema = new Schema({
   after_change: {
     type: Object,
   },
-  change_by: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "User",
+  log_by: {
+    type: Object,
     required: true,
   },
   organisation_id: {

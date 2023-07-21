@@ -5,6 +5,7 @@ const taskModel = require("../models/task");
 const Log = require("../models/log");
 const fs = require("fs");
 const notification = require("../models/notification");
+const { sendMail } = require("../services/sendEmail");
 
 exports.createProject = async (req, res) => {
   try {
@@ -39,10 +40,16 @@ exports.createProject = async (req, res) => {
         const logs = {};
         logs.date_time = new Date();
         logs.collection_name = "projects";
-        logs.document_id = project._id;
+        logs.document_data = {
+          "project id": project._id,
+          "project name": project.project_name,
+        };
         logs.message = "New Project Created";
         logs.after_change = project;
-        logs.change_by = user.id;
+        logs.log_by = {
+          "user id": user.id,
+          "User name": user.name,
+        };
         logs.organisation_id = user.organisation.organisation;
         await Log.create(logs);
 
@@ -52,13 +59,11 @@ exports.createProject = async (req, res) => {
               const eachProjectAssigneeData = await User.findOne({
                 _id: eachProjectAssignee,
               });
-              if (
-                !eachProjectAssigneeData ||
-                eachProjectAssigneeData === null
-              ) {
+              if (eachProjectAssigneeData == null) {
                 return res.status(400).send({
                   status: "400",
-                  message: "User does not exists",
+                  message:
+                    "Project Created Successfully but failed to assign member who is not exist",
                 });
               }
 
@@ -76,17 +81,15 @@ exports.createProject = async (req, res) => {
         if (project) {
           return res
             .status(200)
-            .send({ status: "200", message: "Successfully added Project" });
+            .send({ status: "200", message: "Project Created Successfully" });
         }
       })
       .catch((err) => {
-        console.log(err);
         return res
           .status(500)
-          .send({ status: "500", message: "Unable to save user to DB", err });
+          .send({ status: "500", message: "Unable to Create Project" });
       });
   } catch (err) {
-    console.log(err);
     res.status(500).send({
       status: 500,
       message: "Unable to Create Project",
@@ -424,7 +427,7 @@ exports.editProject = async (req, res) => {
     const getProject = await projectModel.findOne(condition, filterFields);
 
     projectModel
-      .updateMany(condition, req.body)
+      .findByIdAndUpdate(condition, req.body, { new: true })
       .then(async (docs) => {
         if (!docs) {
           return res
@@ -435,11 +438,17 @@ exports.editProject = async (req, res) => {
         const logs = {};
         logs.date_time = new Date();
         logs.collection_name = "projects";
-        logs.document_id = docs._id;
+        logs.document_data = {
+          "project id": docs._id,
+          "project name": docs.project_name,
+        };
         logs.message = "Project Updated";
         logs.before_change = getProject;
         logs.after_change = req.body;
-        logs.change_by = user.id;
+        logs.log_by = {
+          "user id": user.id,
+          "User name": user.name,
+        };
         logs.organisation_id = user.organisation.organisation;
         await Log.create(logs);
 
@@ -507,7 +516,7 @@ exports.changeProjectStatus = async (req, res) => {
     }
 
     projectModel
-      .updateMany(condition, update)
+      .findByIdAndUpdate(condition, update, { new: true })
       .then(async (docs) => {
         if (!docs) {
           return res
@@ -518,11 +527,17 @@ exports.changeProjectStatus = async (req, res) => {
         const logs = {};
         logs.date_time = new Date();
         logs.collection_name = "projects";
-        logs.document_id = docs._id;
+        logs.document_data = {
+          "project id": docs._id,
+          "project name": docs.project_name,
+        };
         logs.message = "Project Status Changed";
         logs.before_change = getProject.project_status;
         logs.after_change = update.project_status;
-        logs.change_by = user.id;
+        logs.log_by = {
+          "user id": user.id,
+          "User name": user.name,
+        };
         logs.organisation_id = user.organisation.organisation;
         await Log.create(logs);
 
@@ -631,17 +646,23 @@ exports.assignProject = async (req, res) => {
 
     const updatedProject = await projectModel.findOne(
       { _id: req.params.id },
-      { project_assignee: 1, _id: 0 }
+      { project_assignee: 1, _id: 1, project_name: 1 }
     );
 
     const logs = {};
     logs.date_time = new Date();
     logs.collection_name = "projects";
-    logs.document_id = updatedProject._id;
+    logs.document_data = {
+      "project id": updatedProject._id,
+      "project name": updatedProject.project_name,
+    };
     logs.message = "Update Project Assignee";
     logs.before_change = project.project_assignee;
     logs.after_change = updatedProject.project_assignee;
-    logs.change_by = user.id;
+    logs.log_by = {
+      "user id": user.id,
+      "User name": user.name,
+    };
     logs.organisation_id = user.organisation.organisation;
     await Log.create(logs);
 
@@ -717,17 +738,23 @@ exports.assignTeamLeader = async (req, res) => {
 
     const updatedProject = await projectModel.findOne(
       { _id: req.params.id },
-      { project_leader: 1, _id: 0 }
+      { project_leader: 1, _id: 1, project_name: 1 }
     );
 
     const logs = {};
     logs.date_time = new Date();
     logs.collection_name = "projects";
-    logs.document_id = updatedProject._id;
+    logs.document_data = {
+      "project id": updatedProject._id,
+      "project name": updatedProject.project_name,
+    };
     logs.message = "Update Project Assignee";
     logs.before_change = project.project_leader;
     logs.after_change = updatedProject.project_leader;
-    logs.change_by = user.id;
+    logs.log_by = {
+      "user id": user.id,
+      "User name": user.name,
+    };
     logs.organisation_id = user.organisation.organisation;
     await Log.create(logs);
 
@@ -745,72 +772,104 @@ exports.assignTeamLeader = async (req, res) => {
 };
 
 exports.addProjectAttachment = async (req, res) => {
-  const user = req.user;
-  const project = await projectModel.findById(req.params.id);
-  if (project.organisation + "" != user.organisation.organisation + "") {
-    // console.log(project.organisation == user.organisation);
-    // console.log(typeof user.organisation);
-    return res.status(401).send({
-      status: 401,
-      message: "Enter project of your organisation",
+  try {
+    const user = req.user;
+    const projectId = req.params.id;
+    const project = await projectModel.findById(projectId);
+
+    if (
+      !project ||
+      project.organisation.toString() !==
+        user.organisation.organisation.toString()
+    ) {
+      return res.status(401).json({
+        status: 401,
+        message: "Enter project of your organisation",
+      });
+    }
+
+    // Check if a file was uploaded
+    if (!req.files || !req.files.file) {
+      return res.status(400).json({
+        status: 400,
+        message: "No file uploaded.",
+      });
+    }
+
+    // Handle the file upload
+    const uploadedFile = req.files.file;
+    const dir = `${__dirname}/../public/attachments/${projectId}`;
+    const filePath = `${dir}/${uploadedFile.name}`;
+
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+
+    uploadedFile.mv(filePath, (err) => {
+      if (err) {
+        return res.status(500).json({
+          status: 500,
+          message: "Failed to upload file.",
+        });
+      }
+
+      // Use the filePath to create the URL for the attachment
+      const url = `/attachments/${projectId}/${uploadedFile.name}`;
+
+      // Get the title from the request body or use the original filename as the title
+      const title = req.body.title || uploadedFile.name;
+
+      // Update the project with the attachment details
+      projectModel
+        .findByIdAndUpdate(
+          { _id: projectId },
+          { $addToSet: { project_attachments: { title, url } } },
+          { new: true }
+        )
+        .then(async (docs) => {
+          if (!docs) {
+            return res.status(400).json({
+              status: 400,
+              message: "Failed to Update",
+            });
+          }
+
+          const logs = {};
+          logs.date_time = new Date();
+          logs.collection_name = "projects";
+          logs.document_data = {
+            "project id": docs._id,
+            "project name": docs.project_name,
+          };
+          logs.message = "Add Project Attachment";
+          logs.before_change = project.project_attachments;
+          logs.after_change = docs.project_attachments;
+          logs.log_by = {
+            "user id": user.id,
+            "User name": user.name,
+          };
+          logs.organisation_id = user.organisation.organisation;
+          await Log.create(logs);
+
+          return res.status(200).json({
+            status: 200,
+            message: "Successfully Updated Project",
+            docs,
+          });
+        })
+        .catch((error) => {
+          return res.status(500).json({
+            status: 500,
+            message: "Failed to update project.",
+          });
+        });
+    });
+  } catch (error) {
+    return res.status(500).json({
+      status: 500,
+      message: "Failed to find project.",
     });
   }
-  // console.log(req.body);
-  // console.log("ADsad");
-  let title = req.body.title;
-
-  // if (req.files && req.files.file) {
-  // let fileName=
-  let dir = `${__dirname}/../public/attachments/${req.params.id}`;
-
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-  // req.files.file.mv(`${dir}/${req.files.file.name}`, (err) => {
-  //   console.log(err);
-  // });
-
-  const bb = busboy({ headers: req.headers });
-  console.log(bb, "bb");
-  let filename;
-  bb.on("file", (name, file, info) => {
-    // let { filename, encoding, mimeType } = info;
-    filename = info.filename;
-    console.log(info);
-    let downloaded = 0;
-    // const saveTo = path.join(".", filename);
-    const saveTo = `${dir}/${filename}`;
-    // console.log(saveTo);
-    file.pipe(fs.createWriteStream(saveTo));
-    file.on("data", (chunk) => {});
-  });
-  bb.on("close", () => {
-    let path = `/attachments/${req.params.id}/${filename}`;
-    if (!title) {
-      title = filename;
-    }
-    projectModel
-      .updateMany(
-        { _id: req.params.id },
-        { $addToSet: { project_attachments: { title: title, url: path } } }
-      )
-      .then((docs) => {
-        if (!docs) {
-          return res
-            .status(400)
-            .send({ status: "400", message: "Failed to Update" });
-        }
-        return res.status(200).send({
-          status: "200",
-          message: "Succesffully Updated Project",
-          docs,
-        });
-      });
-
-    // res.writeHead(200, { Connection: "close" });
-    // res.end(`That's all folks!`);
-  });
-  req.pipe(bb);
 };
 
 exports.deleteProjectAttachment = async (req, res) => {
@@ -818,8 +877,6 @@ exports.deleteProjectAttachment = async (req, res) => {
     const user = req.user;
     const project = await projectModel.findById(req.params.id);
     if (project.organisation + "" != user.organisation.organisation + "") {
-      // console.log(project.organisation == user.organisation);
-      // console.log(typeof user.organisation);
       return res.status(400).send({
         status: 400,
         message: "Enter project of your organisation",
@@ -828,6 +885,7 @@ exports.deleteProjectAttachment = async (req, res) => {
     const attachment = project.project_attachments.find(
       (attachment) => attachment._id == req.body.attachment_id
     );
+
     if (!attachment) {
       return res.status(404).send({
         status: 404,
@@ -839,20 +897,39 @@ exports.deleteProjectAttachment = async (req, res) => {
       if (err) {
         return res.status(500).send({
           status: 500,
-          message: "Unable to delete attachment" + err,
+          message: "Unable to delete attachment",
         });
       }
       projectModel
-        .updateMany(
+        .findByIdAndUpdate(
           { _id: req.params.id },
-          { $pull: { project_attachments: { _id: req.body.attachment_id } } }
+          { $pull: { project_attachments: { _id: req.body.attachment_id } } },
+          { new: true }
         )
-        .then((docs) => {
+        .then(async (docs) => {
           if (!docs) {
             return res
               .status(400)
               .send({ status: "400", message: "Failed to Update" });
           }
+
+          const logs = {};
+          logs.date_time = new Date();
+          logs.collection_name = "projects";
+          logs.document_data = {
+            "project id": docs._id,
+            "project name": docs.project_name,
+          };
+          logs.message = "Delete Project Attachment";
+          logs.before_change = project.project_attachments;
+          logs.after_change = docs.project_attachments;
+          logs.log_by = {
+            "user id": user.id,
+            "User name": user.name,
+          };
+          logs.organisation_id = user.organisation.organisation;
+          await Log.create(logs);
+
           return res.status(200).send({
             status: "200",
             message: "Succesffully Updated Project",

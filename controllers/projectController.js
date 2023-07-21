@@ -41,14 +41,14 @@ exports.createProject = async (req, res) => {
         logs.date_time = new Date();
         logs.collection_name = "projects";
         logs.document_data = {
-          "project id": project._id,
-          "project name": project.project_name,
+          id: project._id,
+          name: project.project_name,
         };
         logs.message = "New Project Created";
         logs.after_change = project;
         logs.log_by = {
-          "user id": user.id,
-          "User name": user.name,
+          id: user.id,
+          name: user.name,
         };
         logs.organisation_id = user.organisation.organisation;
         await Log.create(logs);
@@ -439,15 +439,15 @@ exports.editProject = async (req, res) => {
         logs.date_time = new Date();
         logs.collection_name = "projects";
         logs.document_data = {
-          "project id": docs._id,
-          "project name": docs.project_name,
+          id: docs._id,
+          name: docs.project_name,
         };
         logs.message = "Project Updated";
         logs.before_change = getProject;
         logs.after_change = req.body;
         logs.log_by = {
-          "user id": user.id,
-          "User name": user.name,
+          id: user.id,
+          name: user.name,
         };
         logs.organisation_id = user.organisation.organisation;
         await Log.create(logs);
@@ -528,15 +528,15 @@ exports.changeProjectStatus = async (req, res) => {
         logs.date_time = new Date();
         logs.collection_name = "projects";
         logs.document_data = {
-          "project id": docs._id,
-          "project name": docs.project_name,
+          id: docs._id,
+          name: docs.project_name,
         };
         logs.message = "Project Status Changed";
         logs.before_change = getProject.project_status;
         logs.after_change = update.project_status;
         logs.log_by = {
-          "user id": user.id,
-          "User name": user.name,
+          id: user.id,
+          name: user.name,
         };
         logs.organisation_id = user.organisation.organisation;
         await Log.create(logs);
@@ -653,15 +653,15 @@ exports.assignProject = async (req, res) => {
     logs.date_time = new Date();
     logs.collection_name = "projects";
     logs.document_data = {
-      "project id": updatedProject._id,
-      "project name": updatedProject.project_name,
+      id: updatedProject._id,
+      name: updatedProject.project_name,
     };
     logs.message = "Update Project Assignee";
     logs.before_change = project.project_assignee;
     logs.after_change = updatedProject.project_assignee;
     logs.log_by = {
-      "user id": user.id,
-      "User name": user.name,
+      id: user.id,
+      name: user.name,
     };
     logs.organisation_id = user.organisation.organisation;
     await Log.create(logs);
@@ -745,15 +745,15 @@ exports.assignTeamLeader = async (req, res) => {
     logs.date_time = new Date();
     logs.collection_name = "projects";
     logs.document_data = {
-      "project id": updatedProject._id,
-      "project name": updatedProject.project_name,
+      id: updatedProject._id,
+      name: updatedProject.project_name,
     };
     logs.message = "Update Project Assignee";
     logs.before_change = project.project_leader;
     logs.after_change = updatedProject.project_leader;
     logs.log_by = {
-      "user id": user.id,
-      "User name": user.name,
+      id: user.id,
+      name: user.name,
     };
     logs.organisation_id = user.organisation.organisation;
     await Log.create(logs);
@@ -838,15 +838,15 @@ exports.addProjectAttachment = async (req, res) => {
           logs.date_time = new Date();
           logs.collection_name = "projects";
           logs.document_data = {
-            "project id": docs._id,
-            "project name": docs.project_name,
+            id: docs._id,
+            name: docs.project_name,
           };
           logs.message = "Add Project Attachment";
           logs.before_change = project.project_attachments;
           logs.after_change = docs.project_attachments;
           logs.log_by = {
-            "user id": user.id,
-            "User name": user.name,
+            id: user.id,
+            name: user.name,
           };
           logs.organisation_id = user.organisation.organisation;
           await Log.create(logs);
@@ -917,15 +917,15 @@ exports.deleteProjectAttachment = async (req, res) => {
           logs.date_time = new Date();
           logs.collection_name = "projects";
           logs.document_data = {
-            "project id": docs._id,
-            "project name": docs.project_name,
+            id: docs._id,
+            name: docs.project_name,
           };
           logs.message = "Delete Project Attachment";
           logs.before_change = project.project_attachments;
           logs.after_change = docs.project_attachments;
           logs.log_by = {
-            "user id": user.id,
-            "User name": user.name,
+            id: user.id,
+            name: user.name,
           };
           logs.organisation_id = user.organisation.organisation;
           await Log.create(logs);

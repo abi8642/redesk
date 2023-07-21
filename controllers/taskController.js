@@ -61,14 +61,14 @@ exports.createTask = async (req, res) => {
                 logs.date_time = new Date();
                 logs.collection_name = "tasks";
                 logs.document_data = {
-                  "Task id": task._id,
-                  "Task name": task.task_name,
+                  id: task._id,
+                  name: task.task_name,
                 };
                 logs.message = "New Task Created";
                 logs.after_change = task;
                 logs.log_by = {
-                  "user id": user.id,
-                  "User name": user.name,
+                  id: user.id,
+                  name: user.name,
                 };
                 logs.organisation_id = user.organisation.organisation;
                 await Log.create(logs);
@@ -554,15 +554,15 @@ exports.editTask = async (req, res) => {
         logs.date_time = new Date();
         logs.collection_name = "tasks";
         logs.document_data = {
-          "Task id": docs._id,
-          "Task name": docs.task_name,
+          id: docs._id,
+          name: docs.task_name,
         };
         logs.message = "Task Updated";
         logs.before_change = getTask;
         logs.after_change = req.body;
         logs.log_by = {
-          "user id": user.id,
-          "User name": user.name,
+          id: user.id,
+          name: user.name,
         };
         logs.organisation_id = user.organisation.organisation;
         await Log.create(logs);
@@ -604,15 +604,15 @@ exports.closeTask = async (req, res) => {
       logs.date_time = new Date();
       logs.collection_name = "tasks";
       logs.document_data = {
-        "Task id": getTask._id,
-        "Task name": getTask.task_name,
+        id: getTask._id,
+        name: getTask.task_name,
       };
       logs.message = "Task Closed";
       logs.before_change = getTask.task_labels;
       logs.after_change = result.task_labels;
       logs.log_by = {
-        "user id": user.id,
-        "User name": user.name,
+        id: user.id,
+        name: user.name,
       };
       logs.organisation_id = user.organisation.organisation;
       await Log.create(logs);
@@ -692,15 +692,15 @@ exports.changeTaskStatus = async (req, res) => {
       logs.date_time = new Date();
       logs.collection_name = "tasks";
       logs.document_data = {
-        "Task id": getTask._id,
-        "Task name": getTask.task_name,
+        id: getTask._id,
+        name: getTask.task_name,
       };
       logs.message = "Task Status Changed";
       logs.before_change = config.task_status[getTask.task_status];
       logs.after_change = config.task_status[status];
       logs.log_by = {
-        "user id": user.id,
-        "User name": user.name,
+        id: user.id,
+        name: user.name,
       };
       logs.organisation_id = user.organisation.organisation;
       await Log.create(logs);
@@ -797,14 +797,14 @@ exports.addTaskComment = async (req, res) => {
           logs.date_time = new Date();
           logs.collection_name = "tasks";
           logs.document_data = {
-            "Task id": docs._id,
-            "Task name": docs.task_name,
+            id: docs._id,
+            name: docs.task_name,
           };
           logs.message = "Comment Added on Task";
           logs.after_change = obj;
           logs.log_by = {
-            "user id": user.id,
-            "User name": user.name,
+            id: user.id,
+            name: user.name,
           };
           logs.organisation_id = user.organisation.organisation;
           await Log.create(logs);

@@ -77,13 +77,13 @@ exports.verifyOtp = async (req, res) => {
           logs.date_time = new Date();
           logs.collection_name = "users";
           logs.document_data = {
-            "user id": user._id,
-            "user name": user.name,
+            id: user._id,
+            name: user.name,
           };
           logs.message = "User Login";
           logs.log_by = {
-            "user id": user._id,
-            "User name": user.name,
+            id: user._id,
+            name: user.name,
           };
           logs.organisation_id = orgs[0].organisation;
           await Log.create(logs);
@@ -197,13 +197,13 @@ exports.selectOrganization = async (req, res) => {
             logs.date_time = new Date();
             logs.collection_name = "users";
             logs.document_data = {
-              "user id": user._id,
-              "user name": user.name,
+              id: user._id,
+              name: user.name,
             };
             logs.message = "User Login";
             logs.log_by = {
-              "user id": user._id,
-              "User name": user.name,
+              id: user._id,
+              name: user.name,
             };
             logs.organisation_id = orgs[0].organisation;
             await Log.create(logs);
@@ -941,15 +941,15 @@ exports.changeUserRoles = async (req, res) => {
         logs.date_time = new Date();
         logs.collection_name = "users";
         logs.document_data = {
-          "user id": getUser._id,
-          "user name": getUser.name,
+          id: getUser._id,
+          name: getUser.name,
         };
         logs.message = "User Role Changed";
         logs.before_change = oldRole;
         logs.after_change = newRole;
         logs.log_by = {
-          "user id": user.id,
-          "User name": user.name,
+          id: user.id,
+          name: user.name,
         };
         logs.organisation_id = user.organisation.organisation;
         await Log.create(logs);
@@ -1042,15 +1042,15 @@ exports.userEdit = async (req, res) => {
         logs.date_time = new Date();
         logs.collection_name = "users";
         logs.document_data = {
-          "user id": getUser._id,
-          "user name": getUser.name,
+          id: getUser._id,
+          name: getUser.name,
         };
         logs.message = "User Updated";
         logs.before_change = getUser;
         logs.after_change = req.body;
         logs.log_by = {
-          "user id": user.id,
-          "User name": user.name,
+          id: user.id,
+          name: user.name,
         };
         logs.organisation_id = user.organisation.organisation;
         await Log.create(logs);
@@ -1115,15 +1115,15 @@ exports.userApproveOrReject = async (req, res) => {
           logs.date_time = new Date();
           logs.collection_name = "users";
           logs.document_data = {
-            "user id": getUser._id,
-            "user name": getUser.name,
+            id: getUser._id,
+            name: getUser.name,
           };
           logs.message = "User Status Changed";
           logs.before_change = oldStatus;
           logs.after_change = status;
           logs.log_by = {
-            "user id": user.id,
-            "User name": user.name,
+            id: user.id,
+            name: user.name,
           };
           logs.organisation_id = user.organisation.organisation;
           await Log.create(logs);
@@ -1242,13 +1242,13 @@ exports.createObserver = async (req, res) => {
           logs.date_time = new Date();
           logs.collection_name = "users";
           logs.document_data = {
-            "user id": userExist._id,
-            "user name": userExist.name,
+            id: userExist._id,
+            name: userExist.name,
           };
           logs.message = "Observer Created";
           logs.log_by = {
-            "user id": user.id,
-            "User name": user.name,
+            id: user.id,
+            name: user.name,
           };
           logs.organisation_id = user.organisation.organisation;
           await Log.create(logs);
@@ -1277,13 +1277,13 @@ exports.createObserver = async (req, res) => {
         logs.date_time = new Date();
         logs.collection_name = "users";
         logs.document_data = {
-          "user id": result._id,
-          "user name": result.name,
+          id: result._id,
+          name: result.name,
         };
         logs.message = "Observer Created";
         logs.log_by = {
-          "user id": user.id,
-          "User name": user.name,
+          id: user.id,
+          name: user.name,
         };
         logs.organisation_id = user.organisation.organisation;
         await Log.create(logs);
@@ -1390,13 +1390,13 @@ exports.createClient = async (req, res) => {
         logs.date_time = new Date();
         logs.collection_name = "users";
         logs.document_data = {
-          "user id": findUser._id,
-          "user name": findUser.name,
+          id: findUser._id,
+          name: findUser.name,
         };
         logs.message = "Client Created";
         logs.log_by = {
-          "user id": user.id,
-          "User name": user.name,
+          id: user.id,
+          name: user.name,
         };
         logs.organisation_id = user.organisation.organisation;
         await Log.create(logs);
@@ -1425,13 +1425,13 @@ exports.createClient = async (req, res) => {
       logs.date_time = new Date();
       logs.collection_name = "users";
       logs.document_data = {
-        "user id": result._id,
-        "user name": result.name,
+        id: result._id,
+        name: result.name,
       };
       logs.message = "Client Created";
       logs.log_by = {
-        "user id": user.id,
-        "User name": user.name,
+        id: user.id,
+        name: user.name,
       };
       logs.organisation_id = user.organisation.organisation;
       await Log.create(logs);
@@ -1537,14 +1537,14 @@ exports.createSubAdmin = async (req, res) => {
           logs.date_time = new Date();
           logs.collection_name = "users";
           logs.document_data = {
-            "user id": userExist._id,
-            "user name": userExist.name,
+            id: userExist._id,
+            name: userExist.name,
           };
 
           logs.message = "Subadmin Created";
           logs.log_by = {
-            "user id": user.id,
-            "User name": user.name,
+            id: user.id,
+            name: user.name,
           };
           logs.organisation_id = user.organisation.organisation;
           await Log.create(logs);
@@ -1573,13 +1573,13 @@ exports.createSubAdmin = async (req, res) => {
         logs.date_time = new Date();
         logs.collection_name = "users";
         logs.document_data = {
-          "user id": result._id,
-          "user name": result.name,
+          id: result._id,
+          name: result.name,
         };
         logs.message = "Subadmin Created";
         logs.log_by = {
-          "user id": user.id,
-          "User name": user.name,
+          id: user.id,
+          name: user.name,
         };
         logs.organisation_id = user.organisation.organisation;
         await Log.create(logs);

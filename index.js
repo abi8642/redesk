@@ -1,12 +1,13 @@
 require("dotenv").config();
 const express = require("express");
-// const bodyParser = require("body-parser");
 const cookieParser = require("cookie-parser");
 const cors = require("cors");
 const fileUpload = require("express-fileupload");
 const path = require("path");
-// const {initSocket} = require("./controllers/taskController");
-
+const routers = require("./routes/router");
+const User = require("./models/user");
+const { writeFile } = require("fs");
+const project = require("./models/project");
 require("./db/db_connection");
 
 const app = express();
@@ -21,6 +22,7 @@ app.use(fileUpload());
 
 app.use("/image", express.static(path.join(__dirname, "/files")));
 app.use(express.static("public"));
+
 //make a authentication for the files
 // app.use("/files:id", express.static(path.join(__dirname, "/public/attachments/")));
 
@@ -30,16 +32,10 @@ app.get("/", (req, res) => {
   return res.json({ message: "Hello World!" });
 });
 
-// Import Routes
-const routers = require("./routes/router");
-const User = require("./models/user");
-const { writeFile } = require("fs");
-const project = require("./models/project");
-
 // PORT
 const port = process.env.PORT;
 
-// Starting a server
+// Starting the server
 const server = app.listen(port, () => {
   console.log(`app is running at ${port}`);
 });
@@ -48,7 +44,7 @@ const server = app.listen(port, () => {
 const io = require("socket.io")(server, {
   cors: {
     origin: "*",
-    methods: ["GET", "POST"],
+    methods: ["GET", "POST", "PUT"],
   },
 });
 

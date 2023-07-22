@@ -876,7 +876,6 @@ exports.getTeamLeaderList = async (req, res) => {
 exports.getLoginUser = (req, res) => {
   try {
     const user = req.user;
-    console.log(user);
     const token = req.headers.authorization.split(" ")[1];
 
     return res.status(200).send({

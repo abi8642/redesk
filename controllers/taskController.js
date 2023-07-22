@@ -48,15 +48,6 @@ exports.createTask = async (req, res) => {
           TaskModel.create(payload)
             .then(async (task) => {
               if (task) {
-                // payload.task_assignee.forEach((element) => {
-                //   Notification.create({
-                //     notification: "New Task assigned",
-                //     status: "UNREAD",
-                //     send_by: user.id,
-                //     send_to: element,
-                //   });
-                // });
-
                 const logs = {};
                 logs.date_time = new Date();
                 logs.collection_name = "tasks";
@@ -75,6 +66,18 @@ exports.createTask = async (req, res) => {
 
                 if (task.task_assignee) {
                   if (task.task_assignee.length > 0) {
+                    Notification.create({
+                      title: "New Task assigned",
+                      message: `
+                          Task_Name: <b>${task.task_name}</b><br>
+                          Task_due_on: <b>${task.task_due_on}</b><br>
+                          Task_priority: <b>${task.task_priority}</b><br>
+                          Task_created_by:<b>${user.name}</b>`,
+                      status: "UNREAD",
+                      send_by: user.id,
+                      send_to: task.task_assignee,
+                    });
+
                     for (const eachTaskAssignee of task.task_assignee) {
                       const eachTaskAssigneeData = await User.findOne({
                         _id: eachTaskAssignee,
@@ -88,6 +91,10 @@ exports.createTask = async (req, res) => {
                           message: "User does not exists",
                         });
                       }
+
+                      req.io
+                        .to(eachTaskAssigneeData._id)
+                        .emit("Task_Created", "Success");
 
                       const assigneeMail = eachTaskAssigneeData.email;
                       const subjects = "Task Created";

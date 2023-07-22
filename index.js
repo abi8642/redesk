@@ -57,7 +57,7 @@ io.on("connection", (socket) => {
 
   socket.on("userJoin", (id) => {
     socket.join(id);
-    console.log("user joined room " + id);
+    console.log(`user joined room ${id}`);
   });
 
   socket.on("joinproject", async (data) => {

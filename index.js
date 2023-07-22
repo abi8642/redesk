@@ -5,6 +5,7 @@ const cookieParser = require("cookie-parser");
 const cors = require("cors");
 const fileUpload = require("express-fileupload");
 const path = require("path");
+// const {initSocket} = require("./controllers/taskController");
 
 require("./db/db_connection");
 
@@ -53,6 +54,11 @@ const io = require("socket.io")(server, {
 
 io.on("connection", (socket) => {
   console.log("clint connected " + socket.id);
+
+  socket.on("userJoin", (id) => {
+    socket.join(id);
+    console.log("user joined room " + id);
+  });
 
   socket.on("joinproject", async (data) => {
     const projectList = await project.find(

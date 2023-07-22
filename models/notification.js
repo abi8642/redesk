@@ -11,13 +11,16 @@ const notificationSchema = new Schema(
       type: String,
       required: true,
     },
-
     status: {
       type: String,
       enum: ["READ", "UNREAD"],
       required: true,
     },
-    users: [
+    send_by: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+    },
+    send_to: [
       {
         type: Schema.Types.ObjectId,
         ref: "User",

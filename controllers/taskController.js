@@ -9,6 +9,7 @@ const { validationResult } = require("express-validator");
 const User = require("../models/user");
 const notification = require("../models/notification");
 const { sendMail } = require("../services/sendEmail");
+const task = require("../models/task");
 
 //create task
 exports.createTask = async (req, res) => {
@@ -92,9 +93,9 @@ exports.createTask = async (req, res) => {
                         });
                       }
 
-                      req.io
-                        .to(eachTaskAssigneeData._id)
-                        .emit("Task_Created", "Success");
+                      // req.io
+                      //   .to(eachTaskAssigneeData._id)
+                      //   .emit("task_assigned", "Success");
 
                       const assigneeMail = eachTaskAssigneeData.email;
                       const subjects = "Task Created";
@@ -574,6 +575,36 @@ exports.editTask = async (req, res) => {
         logs.organisation_id = user.organisation.organisation;
         await Log.create(logs);
 
+        if (docs.task_assignee) {
+          Notification.create({
+            title: "New Task assigned",
+            message: `
+              Task_Name: <b>${task.task_name}</b><br>
+              Task_due_on: <b>${task.task_due_on}</b><br>
+              Task_priority: <b>${task.task_priority}</b><br>
+              Task_created_by:<b>${user.name}</b>`,
+            status: "UNREAD",
+            send_by: user.id,
+            send_to: docs.task_assignee,
+          });
+
+          //   for (const eachTaskAssignee of task.task_assignee) {
+          //     const eachTaskAssigneeData = await User.findOne({
+          //       _id: eachTaskAssignee,
+          //     });
+          //     if (!eachTaskAssigneeData || eachTaskAssigneeData === null) {
+          //       return res.status(400).send({
+          //         status: "400",
+          //         message: "User does not exists",
+          //       });
+          //     }
+
+          //     req.io
+          //       .to(eachTaskAssigneeData._id)
+          //       .emit("task_assigned", "Success");
+          //   }
+        }
+
         return res
           .status(200)
           .send({ status: "200", message: "Succesffully Updated Task" });
@@ -666,13 +697,14 @@ exports.changeTaskStatus = async (req, res) => {
     }
 
     let allOk = false;
+    let docs;
     if (status === 6) {
       if (
         user.organisation.role === "admin" ||
         user.organisation.role === "team_lead" ||
         user.organisation.role === "subadmin"
       ) {
-        let docs = await TaskModel.findOneAndUpdate(condition, {
+        docs = await TaskModel.findOneAndUpdate(condition, {
           task_status: status,
         });
         if (docs) {
@@ -685,7 +717,7 @@ exports.changeTaskStatus = async (req, res) => {
         });
       }
     } else {
-      let docs = await TaskModel.findOneAndUpdate(condition, {
+      docs = await TaskModel.findOneAndUpdate(condition, {
         task_status: status,
       });
 
@@ -711,6 +743,31 @@ exports.changeTaskStatus = async (req, res) => {
       };
       logs.organisation_id = user.organisation.organisation;
       await Log.create(logs);
+
+      let sendTo = [];
+
+      if (docs.task_assignee) {
+        for (let assignee of docs.task_assignee) {
+          if (assignee != user.id) {
+            sendTo.push(assignee);
+          }
+        }
+      }
+
+      if (sendTo.length > 0) {
+        await Notification.create({
+          title: "Task Status Changed",
+          message: `${docs.task_name}'s status changed from ${
+            config.task_status[getTask.task_status]
+          } to ${config.task_status[status]}`,
+          status: "UNREAD",
+          send_by: user.id,
+          send_to: sendTo,
+        });
+        // for (let assignee of sendTo) {
+        //   req.io.to(assignee).emit("task_status_changed", "Success");
+        // }
+      }
 
       return res
         .status(200)

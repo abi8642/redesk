@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 
+const { subscribe } = require("../services/pushNotification");
 const {
   signupValidation,
   loginValidation,
@@ -110,6 +111,9 @@ const {
   fileList,
   requestFile,
 } = require("../controllers/fileSystemController");
+
+// Push notification subscribe route
+router.post("/subscribe", subscribe);
 
 //Organisation
 router.post("/createOrganisation", createOrganisation);

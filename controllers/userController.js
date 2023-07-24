@@ -71,7 +71,12 @@ exports.verifyOtp = async (req, res) => {
 
           //regenerate new otp
           const otp = Math.floor(100000 + Math.random() * 900000);
-          await User.updateMany({ email }, { otp });
+          await User.findByIdAndUpdate(
+            { email },
+            {
+              otp,
+            }
+          );
 
           const logs = {};
           logs.date_time = new Date();

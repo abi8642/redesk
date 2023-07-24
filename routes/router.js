@@ -35,6 +35,7 @@ const {
   allUserFromOrgs,
   sendOtp,
   requestToken,
+  subscribeForPushNotification,
 } = require("../controllers/userController");
 const {
   createTask,
@@ -112,9 +113,6 @@ const {
   requestFile,
 } = require("../controllers/fileSystemController");
 
-// Push notification subscribe route
-router.post("/subscribe", subscribe);
-
 //Organisation
 router.post("/createOrganisation", createOrganisation);
 router.post("/createOrganisationfromEmail", createOrganisationfromEmail);
@@ -132,7 +130,7 @@ router.post(
   sendInviteFromCSV
 );
 router.post("/verifyEmailInvite", verifyInvitation);
-router.post("/getdashboarddetails", requiredAuth(), getDashboardDetails);
+router.get("/getdashboarddetails", requiredAuth(), getDashboardDetails);
 router.post("/createCategory", requiredAuth(), createCategory);
 router.post("/editCategory", requiredAuth(), editCategory);
 router.get("/categoryList", requiredAuth(), allCategories);
@@ -141,6 +139,9 @@ router.post("/verifyOtp", verifyOtp);
 router.post("/selectOrganization", selectOrganization);
 router.post("/requestToken", requestToken);
 router.get("/getLogs", requiredAuth(), getLogsByOrg);
+
+// Push notification subscribe route
+router.post("/subscribe", requiredAuth(), subscribeForPushNotification);
 
 //user apis
 router.post("/signup", signupValidation, signup);

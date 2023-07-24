@@ -138,6 +138,22 @@ exports.verifyOtp = async (req, res) => {
   }
 };
 
+exports.subscribeForPushNotification = async (req, res) => {
+  const subscription = req.body;
+  const user = req.user;
+
+  await User.findByIdAndUpdate(
+    { _id: user.id },
+    {
+      notification_subscription: req.body.subscription,
+    }
+  );
+  res.status(201).send({
+    status: 200,
+    message: "Subscribed",
+  });
+};
+
 exports.selectOrganization = async (req, res) => {
   const { organization } = req.body;
   let blankFields = [];

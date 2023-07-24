@@ -18,14 +18,3 @@ exports.sendPushNotification = async (subscription, notifyMsg) => {
     console.error("Error sending push notification:", error);
   }
 };
-
-exports.subscribe = async (req, res) => {
-  const subscription = req.body;
-  const payload = JSON.stringify({
-    title: "Hello World",
-    body: "This is your first push notification",
-  });
-
-  webPush.sendNotification(subscription, payload).catch(console.log);
-  res.status(201).json({});
-};

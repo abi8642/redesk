@@ -518,16 +518,8 @@ exports.getOrganisationList = (req, res) => {
   });
 };
 
-// High Priority
 exports.getDashboardDetails = async (req, res) => {
   const user = req.user;
-
-  await User.findByIdAndUpdate(
-    { _id: user._id },
-    {
-      notification_subscription: req.body.notification_subscription,
-    }
-  );
 
   const projectCount = await Project.countDocuments({
     organisation: user.organisation.organisation,

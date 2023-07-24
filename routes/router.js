@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 
-const { subscribe } = require("../services/pushNotification");
+const { subscribe } = require("../services/configPushNotification");
 const {
   signupValidation,
   loginValidation,
@@ -132,7 +132,7 @@ router.post(
   sendInviteFromCSV
 );
 router.post("/verifyEmailInvite", verifyInvitation);
-router.get("/getdashboarddetails", requiredAuth(), getDashboardDetails);
+router.post("/getdashboarddetails", requiredAuth(), getDashboardDetails);
 router.post("/createCategory", requiredAuth(), createCategory);
 router.post("/editCategory", requiredAuth(), editCategory);
 router.get("/categoryList", requiredAuth(), allCategories);

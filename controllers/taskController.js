@@ -10,6 +10,7 @@ const User = require("../models/user");
 const notification = require("../models/notification");
 const { sendMail } = require("../services/sendEmail");
 const task = require("../models/task");
+const { sendPushNotification } = require("../services/configPushNotification");
 
 //create task
 exports.createTask = async (req, res) => {
@@ -49,6 +50,10 @@ exports.createTask = async (req, res) => {
           TaskModel.create(payload)
             .then(async (task) => {
               if (task) {
+                const projectDetails = await ProjectModel.findOne({
+                  _id: task.project_id,
+                });
+
                 const logs = {};
                 logs.date_time = new Date();
                 logs.collection_name = "tasks";
@@ -96,6 +101,19 @@ exports.createTask = async (req, res) => {
                       // req.io
                       //   .to(eachTaskAssigneeData._id)
                       //   .emit("task_assigned", "Success");
+
+                      if (eachTaskAssigneeData.notification_subscription) {
+                        let notifyMsg = {
+                          title: "New task assigned",
+                          body: `
+                            You are assigned on task "${task.task_name}" of ${projectDetails.project_name} project`,
+                        };
+
+                        await sendPushNotification(
+                          eachTaskAssigneeData.notification_subscription,
+                          notifyMsg
+                        );
+                      }
 
                       const assigneeMail = eachTaskAssigneeData.email;
                       const subjects = "Task Created";
@@ -748,8 +766,26 @@ exports.changeTaskStatus = async (req, res) => {
 
       if (docs.task_assignee) {
         for (let assignee of docs.task_assignee) {
+          const eachTaskAssigneeData = User.findOne({ _id: assignee });
+
           if (assignee != user.id) {
             sendTo.push(assignee);
+            if (eachTaskAssigneeData.notification_subscription) {
+              let notifyMsg = {
+                title: "Task Status Changed",
+                body: `
+                  ${task.task_name} of ${
+                  projectDetails.project_name
+                } project's status changed from ${
+                  config.task_status[getTask.task_status]
+                } to ${config.task_status[status]}`,
+              };
+
+              await sendPushNotification(
+                eachTaskAssigneeData.notification_subscription,
+                notifyMsg
+              );
+            }
           }
         }
       }
@@ -764,9 +800,6 @@ exports.changeTaskStatus = async (req, res) => {
           send_by: user.id,
           send_to: sendTo,
         });
-        // for (let assignee of sendTo) {
-        //   req.io.to(assignee).emit("task_status_changed", "Success");
-        // }
       }
 
       return res

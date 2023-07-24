@@ -45,17 +45,28 @@ async function sendPushNotification(subscription, payload) {
     console.error("Error sending push notification:", error);
   }
 }
+// exports.subscribe = async (req, res) => {
+//   const subscription = req.body;
+
+//   const payload = JSON.stringify({
+//     title: "Hello World",
+//     body: "This is your first push notification",
+//   });
+//   try {
+//     await webpush.sendNotification(subscription, JSON.stringify(payload));
+//     console.log("Push notification sent successfully.");
+//   } catch (error) {
+//     console.error("Error sending push notification:", error);
+//   }
+// };
+
 exports.subscribe = async (req, res) => {
   const subscription = req.body;
-
   const payload = JSON.stringify({
     title: "Hello World",
     body: "This is your first push notification",
   });
-  try {
-    await webpush.sendNotification(subscription, JSON.stringify(payload));
-    console.log("Push notification sent successfully.");
-  } catch (error) {
-    console.error("Error sending push notification:", error);
-  }
+
+  webpush.sendNotification(subscription, payload).catch(console.log);
+  res.status(201).json({});
 };

@@ -130,7 +130,7 @@ router.post(
   sendInviteFromCSV
 );
 router.post("/verifyEmailInvite", verifyInvitation);
-router.post("/getdashboarddetails", requiredAuth(), getDashboardDetails);
+router.get("/getdashboarddetails", requiredAuth(), getDashboardDetails);
 router.post("/createCategory", requiredAuth(), createCategory);
 router.post("/editCategory", requiredAuth(), editCategory);
 router.get("/categoryList", requiredAuth(), allCategories);

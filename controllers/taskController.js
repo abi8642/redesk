@@ -606,21 +606,34 @@ exports.editTask = async (req, res) => {
             send_to: docs.task_assignee,
           });
 
-          //   for (const eachTaskAssignee of task.task_assignee) {
-          //     const eachTaskAssigneeData = await User.findOne({
-          //       _id: eachTaskAssignee,
-          //     });
-          //     if (!eachTaskAssigneeData || eachTaskAssigneeData === null) {
-          //       return res.status(400).send({
-          //         status: "400",
-          //         message: "User does not exists",
-          //       });
-          //     }
+          for (const eachTaskAssignee of docs.task_assignee) {
+            const eachTaskAssigneeData = await User.findOne({
+              _id: eachTaskAssignee,
+            });
+            if (!eachTaskAssigneeData || eachTaskAssigneeData === null) {
+              return res.status(400).send({
+                status: "400",
+                message: "User does not exists",
+              });
+            }
 
-          //     req.io
-          //       .to(eachTaskAssigneeData._id)
-          //       .emit("task_assigned", "Success");
-          //   }
+            if (eachTaskAssigneeData.notification_subscription) {
+              let notifyMsg = {
+                title: "Task Updated",
+                body: `
+                    Task "${task.task_name}" of ${projectDetails.project_name} project is Updated. Check it now.`,
+              };
+
+              await sendPushNotification(
+                eachTaskAssigneeData.notification_subscription,
+                notifyMsg
+              );
+            }
+
+            // req.io
+            //   .to(eachTaskAssigneeData._id)
+            //   .emit("task_assigned", "Success");
+          }
         }
 
         return res

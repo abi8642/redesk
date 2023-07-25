@@ -518,7 +518,6 @@ exports.getOrganisationList = (req, res) => {
   });
 };
 
-// High Priority
 exports.getDashboardDetails = async (req, res) => {
   const user = req.user;
 

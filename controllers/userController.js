@@ -7,6 +7,7 @@ const { validationResult } = require("express-validator");
 const task = require("../models/task");
 const project = require("../models/project");
 const Log = require("../models/log");
+const { sendPushNotification } = require("../services/configPushNotification");
 
 exports.sendOtp = async (req, res) => {
   const { email } = req.body;
@@ -149,13 +150,13 @@ exports.subscribeForPushNotification = async (req, res) => {
         notification_subscription: req.body.subscription,
       }
     );
-    await webPush.sendNotification(
-      subscription,
-      JSON.stringify({
-        title: `Login Successful`,
-        body: `Welcome ${user.name}`,
-      })
-    );
+
+    let notifyMsg = {
+      title: "Login Successful",
+      body: `Welcome ${user.name}`,
+    };
+
+    await sendPushNotification(subscription, notifyMsg);
 
     return res.status(200).send({
       status: 200,

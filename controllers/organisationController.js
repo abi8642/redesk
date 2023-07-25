@@ -79,9 +79,10 @@ exports.createOrganisation = async (req, res) => {
             sendMail(
               email,
               "Set up your account",
-              `Please click on the link to set up your account for ${
+              `Please click on the below link to set up your account for ${
                 email.split("@")[1]
-              } at Redesk. Click the link to verify your account. <a href="https://dev.redesk.in/registerOrgs?token=${emailToken}&email=${email}" target="_blank>https://dev.redesk.in/registerOrgs?token=${emailToken}&email=${email}</a>`
+              } at Redesk. <br><br>
+              https://dev.redesk.in/registerOrgs?token=${emailToken}&email=${email}`
             );
             return res.status(201).send({
               status: "201",
@@ -282,7 +283,8 @@ exports.sendInviteFromOrganisation = async (req, res) => {
         sendMail(
           email,
           "Please set up your account for Redesk",
-          `Please click on the link to set up your account for ${organisation.organisation_name} at Redesk <a href="http://dev.redesk.in/signup?token=${emailToken}&email=${email}" target="_blank">http://dev.redesk.in/signup?token=${emailToken}&email=${email}</a>`
+          `Please click on the below link to set up your account for ${organisation.organisation_name} at Redesk. <br><br> 
+          http://dev.redesk.in/signup?token=${emailToken}&email=${email}`
         );
 
         return res.status(201).send({
@@ -356,7 +358,8 @@ exports.sendInviteFromCSV = async (req, res) => {
                       sendMail(
                         email,
                         "Please set up your account for Redesk",
-                        `Please click on the link to set up your account for ${organisation.organisation_name} at Redesk http://dev.redesk.in/signup?token=${emailToken}&email=${email}`
+                        `Please click on the below link to set up your account for ${organisation.organisation_name} at Redesk. <br><br>
+                        http://dev.redesk.in/signup?token=${emailToken}&email=${email}`
                       )
                         .then((info) => {
                           resolve(info);

@@ -139,19 +139,35 @@ exports.verifyOtp = async (req, res) => {
 };
 
 exports.subscribeForPushNotification = async (req, res) => {
-  const subscription = req.body;
-  const user = req.user;
+  try {
+    const subscription = req.body;
+    const user = req.user;
 
-  await User.findByIdAndUpdate(
-    { _id: user.id },
-    {
-      notification_subscription: req.body.subscription,
-    }
-  );
-  res.status(201).send({
-    status: 200,
-    message: "Subscribed",
-  });
+    await User.findByIdAndUpdate(
+      { _id: user.id },
+      {
+        notification_subscription: req.body.subscription,
+      }
+    );
+    await webPush.sendNotification(
+      subscription,
+      JSON.stringify({
+        title: `Login Successful`,
+        body: `Welcome ${user.name}`,
+      })
+    );
+
+    return res.status(200).send({
+      status: 200,
+      message: "Subscribed",
+    });
+  } catch (error) {
+    console.error("Error sending push notification:", error);
+    return res.status(200).send({
+      status: 200,
+      message: "Subscribed",
+    });
+  }
 };
 
 exports.selectOrganization = async (req, res) => {

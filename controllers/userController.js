@@ -71,7 +71,7 @@ exports.verifyOtp = async (req, res) => {
 
           //regenerate new otp
           const otp = Math.floor(100000 + Math.random() * 900000);
-          await User.findByIdAndUpdate(
+          await User.updateMany(
             { email },
             {
               otp,

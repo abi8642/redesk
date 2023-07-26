@@ -147,14 +147,14 @@ exports.subscribeForPushNotification = async (req, res) => {
     await User.findByIdAndUpdate(
       { _id: user.id },
       {
-        notification_subscription: req.body.subscription,
+        notification_subscription: subscription,
       }
     );
 
-    let notifyMsg = {
+    let notifyMsg = JSON.stringify({
       title: "Login Successful",
-      body: `Welcome ${user.name}`,
-    };
+      body: "Welcome ${user.name}",
+    });
 
     await sendPushNotification(subscription, notifyMsg);
 
@@ -164,9 +164,9 @@ exports.subscribeForPushNotification = async (req, res) => {
     });
   } catch (error) {
     console.error("Error sending push notification:", error);
-    return res.status(200).send({
-      status: 200,
-      message: "Subscribed",
+    return res.status(400).send({
+      status: 400,
+      message: "UnSubscribed",
     });
   }
 };

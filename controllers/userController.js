@@ -180,8 +180,6 @@ exports.subscribeForPushNotification = async (req, res) => {
 
     const userDetails = await User.findOne({ _id: user.id });
 
-    console.log("user details", userDetails);
-
     let subscriptionTokenExists = false;
     if (userDetails.notification_subscription) {
       if (userDetails.notification_subscription.length > 0) {
@@ -195,13 +193,15 @@ exports.subscribeForPushNotification = async (req, res) => {
     }
 
     if (!subscriptionTokenExists) {
-      await User.findOneAndUpdate(
+      userDetails = await User.findOneAndUpdate(
         { _id: user.id },
         {
           $push: { notification_subscription: registrationToken },
         }
       );
     }
+
+    console.log("userDetails: ", userDetails);
 
     const message = {
       notification: {

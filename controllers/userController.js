@@ -139,34 +139,80 @@ exports.verifyOtp = async (req, res) => {
   }
 };
 
+// exports.subscribeForPushNotification = async (req, res) => {
+//   try {
+//     const subscription = req.body;
+//     const user = req.user;
+
+//     await User.findByIdAndUpdate(
+//       { _id: user.id },
+//       {
+//         notification_subscription: subscription,
+//       }
+//     );
+
+//     let notifyMsg = JSON.stringify({
+//       title: "Login Successful",
+//       body: "Welcome ${user.name}",
+//     });
+
+//     await sendPushNotification(subscription, notifyMsg);
+
+//     return res.status(200).send({
+//       status: 200,
+//       message: "Subscribed",
+//     });
+//   } catch (error) {
+//     console.error("Error sending push notification:", error);
+//     return res.status(400).send({
+//       status: 400,
+//       message: "UnSubscribed",
+//     });
+//   }
+// };
+
+// firebase notifications subscribe function
 exports.subscribeForPushNotification = async (req, res) => {
   try {
-    const subscription = req.body;
+    const registrationToken = req.body;
     const user = req.user;
     console.log("subscription", subscription);
     await User.findByIdAndUpdate(
       { _id: user.id },
       {
-        notification_subscription: subscription,
+        $addToSet: { notification_subscription: registrationToken },
       }
     );
 
-    let notifyMsg = JSON.stringify({
-      title: "Login Successful",
-      body: "Welcome ${user.name}",
-    });
+    const message = {
+      notification: {
+        title: "Login Successful",
+        body: "Welcome ${user.name}",
+      },
+      token: registrationToken,
+      android: {
+        ttl: 3600 * 1000, // Time-to-live for the notification in milliseconds (1 hour in this case)
+        priority: "high", // Priority of the notification, can be 'normal' or 'high'
+      },
+      data: {
+        // Additional data payload you want to send with the notification
+        key1: "value1",
+        key2: "value2",
+      },
+    };
 
-    await sendPushNotification(subscription, notifyMsg);
+    await sendPushNotification(message);
 
     return res.status(200).send({
       status: 200,
       message: "Subscribed",
     });
   } catch (error) {
-    console.error("Error sending push notification:", error);
+    console.error("Error sending notification:", error);
     return res.status(400).send({
       status: 400,
-      message: "UnSubscribed",
+      message: "Error sending notification",
+      error,
     });
   }
 };

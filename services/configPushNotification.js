@@ -24,17 +24,18 @@
 // };
 
 const admin = require("firebase-admin");
+const path = require("path");
 
 const serviceAccount = require(path.join(
   __dirname,
-  "./projectredesk-firebase-adminsdk-mfrkv-c21367d4a0.json"
+  "../web-app-67650-firebase-adminsdk-112id-c5da97e59d.json"
 ));
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
 });
 
-export async function sendPushNotification(message) {
+async function sendPushNotification(message) {
   admin
     .messaging()
     .send(message)
@@ -53,3 +54,5 @@ export async function sendPushNotification(message) {
       });
     });
 }
+
+module.exports = sendPushNotification;

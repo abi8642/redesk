@@ -222,6 +222,8 @@ exports.subscribeForPushNotification = async (req, res) => {
 
     let firebaseResp = await sendPushNotification(message);
 
+    console.log("firebaseResp: ", firebaseResp);
+
     if (firebaseResp.status === 1) {
       return res.status(200).send({
         status: 200,
@@ -232,7 +234,7 @@ exports.subscribeForPushNotification = async (req, res) => {
       return res.status(400).send({
         status: 400,
         message: "Error sending notification",
-        error: firebaseResp.error,
+        error: firebaseResp.err,
       });
     }
   } catch (error) {

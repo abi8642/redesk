@@ -35,7 +35,7 @@ admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
 });
 
-async function sendPushNotification(message) {
+exports.sendPushNotification = async (message) => {
   admin
     .messaging()
     .send(message)
@@ -53,6 +53,4 @@ async function sendPushNotification(message) {
         error,
       });
     });
-}
-
-module.exports = sendPushNotification;
+};

@@ -36,19 +36,19 @@ admin.initializeApp({
 });
 
 exports.sendPushNotification = async (message) => {
-  admin
-    .messaging()
-    .send(message)
-    .then((response) => {
+  try {
+    const response = await admin.messaging().send(message);
+
+    if (response) {
       return {
         status: 1,
         response,
       };
-    })
-    .catch((error) => {
-      return {
-        status: 0,
-        error,
-      };
-    });
+    }
+  } catch (err) {
+    return {
+      status: 0,
+      err,
+    };
+  }
 };

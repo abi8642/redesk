@@ -176,12 +176,41 @@ exports.subscribeForPushNotification = async (req, res) => {
   try {
     const registrationToken = req.body.registrationToken;
     const user = req.user;
-    await User.findByIdAndUpdate(
+
+    // const userDetails = await User.findByIdAndUpdate(
+    //   { _id: user.id },
+    //   {
+    //     notification_subscription: registrationToken,
+    //   }
+    // );
+    const userDetails = await User.findOneAndUpdate(
       { _id: user.id },
       {
-        $addToSet: { notification_subscription: registrationToken },
-      }
+        $push: { notification_subscription: registrationToken },
+      },
+      { new: true }
     );
+
+    console.log("user details", userDetails);
+
+    // if (userDetails.notification_subscription.length > 0) {
+    //   let subscriptionTokenExists = false;
+    //   for (let subscriptionToken in userDetails.notification_subscription) {
+    //     if (subscriptionToken == registrationToken) {
+    //       subscriptionTokenExists = true;
+    //       break;
+    //     }
+    //   }
+
+    //   if (!subscriptionTokenExists) {
+    //     await User.findOneAndUpdate(
+    //       { _id: user.id },
+    //       {
+    //         $push: { notification_subscription: registrationToken },
+    //       }
+    //     );
+    //   }
+    // }
 
     const message = {
       notification: {

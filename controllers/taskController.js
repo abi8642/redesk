@@ -102,18 +102,18 @@ exports.createTask = async (req, res) => {
                       //   .to(eachTaskAssigneeData._id)
                       //   .emit("task_assigned", "Success");
 
-                      if (eachTaskAssigneeData.notification_subscription) {
-                        let notifyMsg = {
-                          title: "New task assigned",
-                          body: `
-                            You are assigned on task "${task.task_name}" of ${projectDetails.project_name} project`,
-                        };
+                      // if (eachTaskAssigneeData.notification_subscription) {
+                      //   let notifyMsg = {
+                      //     title: "New task assigned",
+                      //     body: `
+                      //       You are assigned on task "${task.task_name}" of ${projectDetails.project_name} project`,
+                      //   };
 
-                        await sendPushNotification(
-                          eachTaskAssigneeData.notification_subscription,
-                          notifyMsg
-                        );
-                      }
+                      //   await sendPushNotification(
+                      //     eachTaskAssigneeData.notification_subscription,
+                      //     notifyMsg
+                      //   );
+                      // }
 
                       const assigneeMail = eachTaskAssigneeData.email;
                       const subjects = "Task Created";
@@ -617,18 +617,18 @@ exports.editTask = async (req, res) => {
               });
             }
 
-            if (eachTaskAssigneeData.notification_subscription) {
-              let notifyMsg = {
-                title: "Task Updated",
-                body: `
-                    Task "${task.task_name}" of ${projectDetails.project_name} project is Updated. Check it now.`,
-              };
+            // if (eachTaskAssigneeData.notification_subscription) {
+            //   let notifyMsg = {
+            //     title: "Task Updated",
+            //     body: `
+            //         Task "${task.task_name}" of ${projectDetails.project_name} project is Updated. Check it now.`,
+            //   };
 
-              await sendPushNotification(
-                eachTaskAssigneeData.notification_subscription,
-                notifyMsg
-              );
-            }
+            //   await sendPushNotification(
+            //     eachTaskAssigneeData.notification_subscription,
+            //     notifyMsg
+            //   );
+            // }
 
             // req.io
             //   .to(eachTaskAssigneeData._id)
@@ -783,22 +783,22 @@ exports.changeTaskStatus = async (req, res) => {
 
           if (assignee != user.id) {
             sendTo.push(assignee);
-            if (eachTaskAssigneeData.notification_subscription) {
-              let notifyMsg = {
-                title: "Task Status Changed",
-                body: `
-                  ${task.task_name} of ${
-                  projectDetails.project_name
-                } project's status changed from ${
-                  config.task_status[getTask.task_status]
-                } to ${config.task_status[status]}`,
-              };
+            // if (eachTaskAssigneeData.notification_subscription) {
+            //   let notifyMsg = {
+            //     title: "Task Status Changed",
+            //     body: `
+            //       ${task.task_name} of ${
+            //       projectDetails.project_name
+            //     } project's status changed from ${
+            //       config.task_status[getTask.task_status]
+            //     } to ${config.task_status[status]}`,
+            //   };
 
-              await sendPushNotification(
-                eachTaskAssigneeData.notification_subscription,
-                notifyMsg
-              );
-            }
+            //   await sendPushNotification(
+            //     eachTaskAssigneeData.notification_subscription,
+            //     notifyMsg
+            //   );
+            // }
           }
         }
       }

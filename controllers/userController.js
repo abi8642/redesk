@@ -183,7 +183,7 @@ exports.subscribeForPushNotification = async (req, res) => {
     //     notification_subscription: registrationToken,
     //   }
     // );
-    await User.findOneAndUpdate(
+    const userDetails = await User.findOneAndUpdate(
       { _id: user.id },
       {
         $push: { notification_subscription: registrationToken },
@@ -191,7 +191,7 @@ exports.subscribeForPushNotification = async (req, res) => {
       { new: true }
     );
 
-    // console.log("user details", userDetails);
+    console.log("user details", userDetails);
 
     // if (userDetails.notification_subscription.length > 0) {
     //   let subscriptionTokenExists = false;

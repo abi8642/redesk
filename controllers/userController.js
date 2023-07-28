@@ -176,7 +176,6 @@ exports.subscribeForPushNotification = async (req, res) => {
   try {
     const registrationToken = req.body.registrationToken;
     const user = req.user;
-    console.log("subscription", subscription);
     await User.findByIdAndUpdate(
       { _id: user.id },
       {

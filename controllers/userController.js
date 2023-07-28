@@ -178,7 +178,7 @@ exports.subscribeForPushNotification = async (req, res) => {
     const registrationToken = req.body.registrationToken;
     const user = req.user;
 
-    const userDetails = await User.findOne({ _id: user.id });
+    let userDetails = await User.findOne({ _id: user.id });
 
     let subscriptionTokenExists = false;
     if (userDetails.notification_subscription) {
@@ -220,12 +220,21 @@ exports.subscribeForPushNotification = async (req, res) => {
       },
     };
 
-    await sendPushNotification(message);
+    let firebaseResp = await sendPushNotification(message);
 
-    return res.status(200).send({
-      status: 200,
-      message: "Subscribed",
-    });
+    if (firebaseResp.status === 1) {
+      return res.status(200).send({
+        status: 200,
+        message: "Send Notification Successfully",
+        response: firebaseResp.response,
+      });
+    } else {
+      return res.status(400).send({
+        status: 400,
+        message: "Error sending notification",
+        error: firebaseResp.error,
+      });
+    }
   } catch (error) {
     console.error("Error sending notification:", error);
     return res.status(400).send({

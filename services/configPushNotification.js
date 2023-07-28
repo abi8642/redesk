@@ -40,17 +40,15 @@ exports.sendPushNotification = async (message) => {
     .messaging()
     .send(message)
     .then((response) => {
-      return res.status(200).json({
-        status: "200",
-        message: "Notification sent successfully",
+      return {
+        status: 1,
         response,
-      });
+      };
     })
     .catch((error) => {
-      return res.status(500).json({
-        status: "500",
-        message: "error in sending message",
+      return {
+        status: 0,
         error,
-      });
+      };
     });
 };

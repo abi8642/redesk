@@ -24,12 +24,10 @@
 // };
 
 const admin = require("firebase-admin");
-const path = require("path");
 
-const serviceAccount = require(path.join(
-  __dirname,
-  "../web-app-67650-firebase-adminsdk-112id-c5da97e59d.json"
-));
+const serviceAccount = require("../web-app-67650-firebase-adminsdk-112id-c5da97e59d.json");
+
+console.log("serviceAccount", serviceAccount);
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),

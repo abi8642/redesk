@@ -157,12 +157,21 @@ exports.subscribeForPushNotification = async (req, res) => {
       body: "Welcome ${user.name}",
     });
 
-    await sendPushNotification(res, subscription, notifyMsg);
+    const response = await sendPushNotification(subscription, notifyMsg);
 
-    return res.status(200).send({
-      status: 200,
-      message: "Subscribed",
-    });
+    if (response.status === 1) {
+      return res.status(200).send({
+        status: 200,
+        message: "Send Notification Successfully",
+        response: response.response,
+      });
+    } else {
+      return res.status(400).send({
+        status: 400,
+        message: "Error sending notification",
+        error: response.err,
+      });
+    }
   } catch (error) {
     console.error("Error sending push notification:", error);
     return res.status(400).send({

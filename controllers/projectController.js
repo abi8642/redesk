@@ -67,18 +67,18 @@ exports.createProject = async (req, res) => {
                 });
               }
 
-              if (eachProjectAssigneeData.notification_subscription) {
-                let notifyMsg = {
-                  title: "New Project Assigned",
-                  body: `
-                    You are assigned on a project "${project.project_name}"`,
-                };
+              // if (eachProjectAssigneeData.notification_subscription) {
+              //   let notifyMsg = {
+              //     title: "New Project Assigned",
+              //     body: `
+              //       You are assigned on a project "${project.project_name}"`,
+              //   };
 
-                await sendPushNotification(
-                  eachProjectAssigneeData.notification_subscription,
-                  notifyMsg
-                );
-              }
+              //   await sendPushNotification(
+              //     eachProjectAssigneeData.notification_subscription,
+              //     notifyMsg
+              //   );
+              // }
 
               const assigneeMail = eachProjectAssigneeData.email;
               const subjects = "You are assign on a project";

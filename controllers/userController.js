@@ -201,12 +201,10 @@ exports.subscribeForPushNotification = async (req, res) => {
       );
     }
 
-    console.log("userDetails: ", userDetails);
-
     const message = {
       notification: {
         title: "Login Successful",
-        body: "Welcome ${user.name}",
+        body: `Welcome ${user.name}`,
       },
       token: registrationToken,
       android: {

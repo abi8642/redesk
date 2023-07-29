@@ -186,6 +186,7 @@ exports.subscribeForPushNotification = async (req, res) => {
   try {
     const registrationToken = req.body.registrationToken;
     const user = req.user;
+    console.log("registrationToken", registrationToken);
 
     // let userDetails = await User.findOne({ _id: user.id });
 

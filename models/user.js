@@ -57,14 +57,14 @@ const userSchema = new mongoose.Schema(
     phone: {
       type: Number,
     },
-    // notification_subscription: {
-    //   type: object,
-    // },
-    notification_subscription: [
-      {
-        type: String,
-      },
-    ],
+    notification_subscription: {
+      type: Object,
+    },
+    // notification_subscription: [
+    //   {
+    //     type: String,
+    //   },
+    // ],
   },
   { timestamps: true }
 );

@@ -140,119 +140,120 @@ exports.verifyOtp = async (req, res) => {
 };
 
 // Notification using web-push
-exports.subscribeForPushNotification = async (req, res) => {
-  try {
-    const subscription = req.body.subscription;
-    const user = req.user;
-
-    await User.findByIdAndUpdate(
-      { _id: user.id },
-      {
-        notification_subscription: subscription,
-      }
-    );
-
-    let notifyMsg = JSON.stringify({
-      title: "Login Successful",
-      body: "Welcome ${user.name}",
-    });
-
-    const response = await sendPushNotification(subscription, notifyMsg);
-
-    if (response.status === 1) {
-      return res.status(200).send({
-        status: 200,
-        message: "Send Notification Successfully",
-        response: response.response,
-      });
-    } else {
-      return res.status(400).send({
-        status: 400,
-        message: "Error sending notification",
-        error: response.err,
-      });
-    }
-  } catch (error) {
-    console.error("Error sending push notification:", error);
-    return res.status(400).send({
-      status: 400,
-      message: "UnSubscribed",
-    });
-  }
-};
-
-// firebase notifications subscribe function
 // exports.subscribeForPushNotification = async (req, res) => {
 //   try {
-//     const registrationToken = req.body.registrationToken;
+//     const subscription = req.body.subscription;
 //     const user = req.user;
 
-//     let userDetails = await User.findOne({ _id: user.id });
-
-//     let subscriptionTokenExists = false;
-//     if (userDetails.notification_subscription) {
-//       if (userDetails.notification_subscription.length > 0) {
-//         for (let subscriptionToken in userDetails.notification_subscription) {
-//           if (subscriptionToken == registrationToken) {
-//             subscriptionTokenExists = true;
-//             break;
-//           }
-//         }
+//     await User.findByIdAndUpdate(
+//       { _id: user.id },
+//       {
+//         notification_subscription: subscription,
 //       }
-//     }
+//     );
 
-//     if (!subscriptionTokenExists) {
-//       userDetails = await User.findOneAndUpdate(
-//         { _id: user.id },
-//         {
-//           $push: { notification_subscription: registrationToken },
-//         }
-//       );
-//     }
+//     let notifyMsg = JSON.stringify({
+//       title: "Login Successful",
+//       body: "Welcome ${user.name}",
+//     });
 
-//     const message = {
-//       notification: {
-//         title: "Login Successful",
-//         body: `Welcome ${user.name}`,
-//       },
-//       token: registrationToken,
-//       // android: {
-//       //   ttl: 3600 * 1000, // Time-to-live for the notification in milliseconds (1 hour in this case)
-//       //   priority: "high", // Priority of the notification, can be 'normal' or 'high'
-//       // },
-//       // data: {
-//       //   // Additional data payload you want to send with the notification
-//       //   key1: "value1",
-//       //   key2: "value2",
-//       // },
-//     };
+//     const response = await sendPushNotification(subscription, notifyMsg);
 
-//     let firebaseResp = await sendPushNotification(message);
-
-//     console.log("firebaseResp: ", firebaseResp);
-
-//     if (firebaseResp.status === 1) {
+//     if (response.status === 1) {
 //       return res.status(200).send({
 //         status: 200,
 //         message: "Send Notification Successfully",
-//         response: firebaseResp.response,
+//         response: response.response,
 //       });
 //     } else {
 //       return res.status(400).send({
 //         status: 400,
 //         message: "Error sending notification",
-//         error: firebaseResp.err,
+//         error: response.err,
 //       });
 //     }
 //   } catch (error) {
-//     console.error("Error sending notification:", error);
+//     console.error("Error sending push notification:", error);
 //     return res.status(400).send({
 //       status: 400,
-//       message: "Error sending notification",
-//       error,
+//       message: "UnSubscribed",
 //     });
 //   }
 // };
+
+// firebase notifications subscribe function
+exports.subscribeForPushNotification = async (req, res) => {
+  try {
+    // const registrationToken = req.body.registrationToken;
+    // const user = req.user;
+
+    // let userDetails = await User.findOne({ _id: user.id });
+
+    // let subscriptionTokenExists = false;
+    // if (userDetails.notification_subscription) {
+    //   if (userDetails.notification_subscription.length > 0) {
+    //     for (let subscriptionToken in userDetails.notification_subscription) {
+    //       if (subscriptionToken == registrationToken) {
+    //         subscriptionTokenExists = true;
+    //         break;
+    //       }
+    //     }
+    //   }
+    // }
+
+    // if (!subscriptionTokenExists) {
+    //   userDetails = await User.findOneAndUpdate(
+    //     { _id: user.id },
+    //     {
+    //       $push: { notification_subscription: registrationToken },
+    //     }
+    //   );
+    // }
+
+    const message = {
+      notification: {
+        title: "Login Successful",
+        body: "Welcome ${user.name}",
+      },
+      token:
+        "fk8ChyHFOiYFAKTO5NlilF:APA91bGMw5M6zQHab5GH_rx91OZbw9MKufi4i8vhYvz4CnWeLJRtKJ6NSYbgldaUcjJJr9ckGrFWemme8vZ-maLxs2MSnfaYmi1S5N_cci3znRNMEXHRUNVZip7BdRXTzPX6e5Ca5ebN",
+      // android: {
+      //   ttl: 3600 * 1000, // Time-to-live for the notification in milliseconds (1 hour in this case)
+      //   priority: "high", // Priority of the notification, can be 'normal' or 'high'
+      // },
+      // data: {
+      //   // Additional data payload you want to send with the notification
+      //   key1: "value1",
+      //   key2: "value2",
+      // },
+    };
+
+    let firebaseResp = await sendPushNotification(message);
+
+    console.log("firebaseResp: ", firebaseResp);
+
+    if (firebaseResp.status === 1) {
+      return res.status(200).send({
+        status: 200,
+        message: "Send Notification Successfully",
+        response: firebaseResp.response,
+      });
+    } else {
+      return res.status(400).send({
+        status: 400,
+        message: "Error sending notification",
+        error: firebaseResp.err,
+      });
+    }
+  } catch (error) {
+    console.error("Error sending notification:", error);
+    return res.status(400).send({
+      status: 400,
+      message: "Error sending notification",
+      error,
+    });
+  }
+};
 
 exports.selectOrganization = async (req, res) => {
   const { organization } = req.body;

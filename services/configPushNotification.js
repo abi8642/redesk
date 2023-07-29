@@ -27,13 +27,13 @@ const admin = require("firebase-admin");
 
 const serviceAccount = require("../web-app-67650-firebase-adminsdk-112id-c5da97e59d.json");
 
-admin.initializeApp({
+const firebase = admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
 });
 
 exports.sendPushNotification = async (message) => {
   try {
-    const response = await admin.messaging().send(message);
+    const response = await admin.messaging(firebase).send(message);
 
     if (response) {
       return {

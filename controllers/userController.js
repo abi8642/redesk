@@ -184,8 +184,8 @@ exports.verifyOtp = async (req, res) => {
 // firebase notifications subscribe function
 exports.subscribeForPushNotification = async (req, res) => {
   try {
-    // const registrationToken = req.body.registrationToken;
-    // const user = req.user;
+    const registrationToken = req.body.registrationToken;
+    const user = req.user;
 
     // let userDetails = await User.findOne({ _id: user.id });
 
@@ -213,10 +213,9 @@ exports.subscribeForPushNotification = async (req, res) => {
     const message = {
       notification: {
         title: "Login Successful",
-        body: "Welcome ${user.name}",
+        body: `Welcome ${user.name}`,
       },
-      token:
-        "fk8ChyHFOiYFAKTO5NlilF:APA91bGMw5M6zQHab5GH_rx91OZbw9MKufi4i8vhYvz4CnWeLJRtKJ6NSYbgldaUcjJJr9ckGrFWemme8vZ-maLxs2MSnfaYmi1S5N_cci3znRNMEXHRUNVZip7BdRXTzPX6e5Ca5ebN",
+      token: registrationToken,
       // android: {
       //   ttl: 3600 * 1000, // Time-to-live for the notification in milliseconds (1 hour in this case)
       //   priority: "high", // Priority of the notification, can be 'normal' or 'high'
@@ -229,8 +228,6 @@ exports.subscribeForPushNotification = async (req, res) => {
     };
 
     let firebaseResp = await sendPushNotification(message);
-
-    console.log("firebaseResp: ", firebaseResp);
 
     if (firebaseResp.status === 1) {
       return res.status(200).send({

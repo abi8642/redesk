@@ -207,15 +207,15 @@ exports.subscribeForPushNotification = async (req, res) => {
         body: `Welcome ${user.name}`,
       },
       token: registrationToken,
-      android: {
-        ttl: 3600 * 1000, // Time-to-live for the notification in milliseconds (1 hour in this case)
-        priority: "high", // Priority of the notification, can be 'normal' or 'high'
-      },
-      data: {
-        // Additional data payload you want to send with the notification
-        key1: "value1",
-        key2: "value2",
-      },
+      // android: {
+      //   ttl: 3600 * 1000, // Time-to-live for the notification in milliseconds (1 hour in this case)
+      //   priority: "high", // Priority of the notification, can be 'normal' or 'high'
+      // },
+      // data: {
+      //   // Additional data payload you want to send with the notification
+      //   key1: "value1",
+      //   key2: "value2",
+      // },
     };
 
     let firebaseResp = await sendPushNotification(message);

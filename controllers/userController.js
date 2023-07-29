@@ -142,7 +142,7 @@ exports.verifyOtp = async (req, res) => {
 // Notification using web-push
 exports.subscribeForPushNotification = async (req, res) => {
   try {
-    const subscription = req.body;
+    const subscription = req.body.subscription;
     const user = req.user;
 
     await User.findByIdAndUpdate(
@@ -157,7 +157,7 @@ exports.subscribeForPushNotification = async (req, res) => {
       body: "Welcome ${user.name}",
     });
 
-    await sendPushNotification(subscription, notifyMsg);
+    await sendPushNotification(res, subscription, notifyMsg);
 
     return res.status(200).send({
       status: 200,

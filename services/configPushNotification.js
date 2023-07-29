@@ -10,16 +10,23 @@ webPush.setVapidDetails(
 );
 
 // Function to send push notifications
-exports.sendPushNotification = async (res, subscription, notifyMsg) => {
+exports.sendPushNotification = async (subscription, notifyMsg) => {
   try {
-    await webPush.sendNotification(subscription, notifyMsg);
+    const response = await webPush.sendNotification(subscription, notifyMsg);
+
     console.log("Push notification sent successfully.");
+    if (response) {
+      return {
+        status: 1,
+        response,
+      };
+    }
   } catch (error) {
     console.error("Error sending push notification:", error);
-    return res.status(400).send({
-      status: 400,
-      message: "UnSubscribed",
-    });
+    return {
+      status: 0,
+      err,
+    };
   }
 };
 

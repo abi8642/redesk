@@ -21,8 +21,8 @@ exports.sendPushNotification = async (subscription, notifyMsg) => {
         response,
       };
     }
-  } catch (error) {
-    console.error("Error sending push notification:", error);
+  } catch (err) {
+    console.error("Error sending push notification:", err);
     return {
       status: 0,
       err,

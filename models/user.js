@@ -58,7 +58,7 @@ const userSchema = new mongoose.Schema(
       type: Number,
     },
     notification_subscription: {
-      type: Object,
+      type: String,
     },
     // notification_subscription: [
     //   {

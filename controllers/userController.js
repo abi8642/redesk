@@ -184,48 +184,44 @@ exports.verifyOtp = async (req, res) => {
 // firebase notifications subscribe function
 exports.subscribeForPushNotification = async (req, res) => {
   try {
-    const registrationToken = req.body.registrationToken;
-    // const user = req.user;
-    console.log("registrationToken", registrationToken);
+    const { registrationToken } = req.body;
+    const user = req.user;
+    let userDetails = await User.findOne({ _id: user.id });
 
-    // let userDetails = await User.findOne({ _id: user.id });
+    let subscriptionTokenExists = false;
+    if (userDetails.notification_subscription) {
+      if (userDetails.notification_subscription.length > 0) {
+        for (let subscriptionToken in userDetails.notification_subscription) {
+          if (subscriptionToken == registrationToken) {
+            subscriptionTokenExists = true;
+            break;
+          }
+        }
+      }
+    } else {
+      userDetails = await User.findOneAndUpdate(
+        { _id: user.id },
+        {
+          notification_subscription: registrationToken,
+        }
+      );
+    }
 
-    // let subscriptionTokenExists = false;
-    // if (userDetails.notification_subscription) {
-    //   if (userDetails.notification_subscription.length > 0) {
-    //     for (let subscriptionToken in userDetails.notification_subscription) {
-    //       if (subscriptionToken == registrationToken) {
-    //         subscriptionTokenExists = true;
-    //         break;
-    //       }
-    //     }
-    //   }
-    // }
-
-    // if (!subscriptionTokenExists) {
-    //   userDetails = await User.findOneAndUpdate(
-    //     { _id: user.id },
-    //     {
-    //       $push: { notification_subscription: registrationToken },
-    //     }
-    //   );
-    // }
+    if (!subscriptionTokenExists) {
+      userDetails = await User.findOneAndUpdate(
+        { _id: user.id },
+        {
+          $push: { notification_subscription: registrationToken },
+        }
+      );
+    }
 
     const message = {
       notification: {
         title: "Login Successful",
-        body: "`Welcome ${user.name}`",
+        body: `Welcome ${user.name}`,
       },
       token: registrationToken,
-      // android: {
-      //   ttl: 3600 * 1000, // Time-to-live for the notification in milliseconds (1 hour in this case)
-      //   priority: "high", // Priority of the notification, can be 'normal' or 'high'
-      // },
-      // data: {
-      //   // Additional data payload you want to send with the notification
-      //   key1: "value1",
-      //   key2: "value2",
-      // },
     };
 
     let firebaseResp = await sendPushNotification(message);

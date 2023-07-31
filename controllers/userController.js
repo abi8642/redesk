@@ -185,7 +185,7 @@ exports.verifyOtp = async (req, res) => {
 exports.subscribeForPushNotification = async (req, res) => {
   try {
     const registrationToken = req.body.registrationToken;
-    const user = req.user;
+    // const user = req.user;
     console.log("registrationToken", registrationToken);
 
     // let userDetails = await User.findOne({ _id: user.id });
@@ -214,7 +214,7 @@ exports.subscribeForPushNotification = async (req, res) => {
     const message = {
       notification: {
         title: "Login Successful",
-        body: `Welcome ${user.name}`,
+        body: "`Welcome ${user.name}`",
       },
       token: registrationToken,
       // android: {
@@ -1114,11 +1114,17 @@ exports.userEdit = async (req, res) => {
 
     let fields = [];
 
+    if (req.body._id) {
+      fields.push(" id ");
+    }
     if (req.body.email) {
       fields.push(" email ");
     }
     if (req.body.otp) {
       fields.push(" otp ");
+    }
+    if (req.body.role) {
+      fields.push(" role ");
     }
 
     if (fields.length > 0) {
@@ -1145,11 +1151,6 @@ exports.userEdit = async (req, res) => {
       filterFields
     );
 
-    if (req.body.role) {
-      return res
-        .status(400)
-        .send({ status: "400", message: "Cant update role" });
-    }
     User.findByIdAndUpdate(condition, req.body, { new: true })
       .then(async (docs) => {
         if (!docs) {

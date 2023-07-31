@@ -141,7 +141,11 @@ router.post("/requestToken", requestToken);
 router.get("/getLogs", requiredAuth(), getLogsByOrg);
 
 // Push notification subscribe route
-router.post("/subscribeToNotification", subscribeForPushNotification);
+router.post(
+  "/subscribeToNotification",
+  // requiredAuth(),
+  subscribeForPushNotification
+);
 
 //user apis
 router.post("/signup", signupValidation, signup);

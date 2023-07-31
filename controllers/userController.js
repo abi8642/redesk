@@ -184,7 +184,7 @@ exports.verifyOtp = async (req, res) => {
 // firebase notifications subscribe function
 exports.subscribeForPushNotification = async (req, res) => {
   try {
-    const registrationToken = req.body.registrationToken;
+    const { registrationToken } = req.body;
     // const user = req.user;
     console.log("registrationToken", registrationToken);
 

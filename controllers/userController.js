@@ -184,8 +184,9 @@ exports.verifyOtp = async (req, res) => {
 // firebase notifications subscribe function
 exports.subscribeForPushNotification = async (req, res) => {
   try {
-    // const registrationToken = req.body.registrationToken;
+    const registrationToken = req.body.registrationToken;
     // const user = req.user;
+    console.log("registrationToken", registrationToken);
 
     // let userDetails = await User.findOne({ _id: user.id });
 
@@ -213,10 +214,9 @@ exports.subscribeForPushNotification = async (req, res) => {
     const message = {
       notification: {
         title: "Login Successful",
-        body: "Welcome ${user.name}",
+        body: "`Welcome ${user.name}`",
       },
-      token:
-        "fk8ChyHFOiYFAKTO5NlilF:APA91bGMw5M6zQHab5GH_rx91OZbw9MKufi4i8vhYvz4CnWeLJRtKJ6NSYbgldaUcjJJr9ckGrFWemme8vZ-maLxs2MSnfaYmi1S5N_cci3znRNMEXHRUNVZip7BdRXTzPX6e5Ca5ebN",
+      token: registrationToken,
       // android: {
       //   ttl: 3600 * 1000, // Time-to-live for the notification in milliseconds (1 hour in this case)
       //   priority: "high", // Priority of the notification, can be 'normal' or 'high'
@@ -229,8 +229,6 @@ exports.subscribeForPushNotification = async (req, res) => {
     };
 
     let firebaseResp = await sendPushNotification(message);
-
-    console.log("firebaseResp: ", firebaseResp);
 
     if (firebaseResp.status === 1) {
       return res.status(200).send({
@@ -1116,11 +1114,17 @@ exports.userEdit = async (req, res) => {
 
     let fields = [];
 
+    if (req.body._id) {
+      fields.push(" id ");
+    }
     if (req.body.email) {
       fields.push(" email ");
     }
     if (req.body.otp) {
       fields.push(" otp ");
+    }
+    if (req.body.role) {
+      fields.push(" role ");
     }
 
     if (fields.length > 0) {
@@ -1147,11 +1151,6 @@ exports.userEdit = async (req, res) => {
       filterFields
     );
 
-    if (req.body.role) {
-      return res
-        .status(400)
-        .send({ status: "400", message: "Cant update role" });
-    }
     User.findByIdAndUpdate(condition, req.body, { new: true })
       .then(async (docs) => {
         if (!docs) {

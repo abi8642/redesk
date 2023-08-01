@@ -139,48 +139,6 @@ exports.verifyOtp = async (req, res) => {
   }
 };
 
-// Notification using web-push
-// exports.subscribeForPushNotification = async (req, res) => {
-//   try {
-//     const subscription = req.body.subscription;
-//     const user = req.user;
-
-//     await User.findByIdAndUpdate(
-//       { _id: user.id },
-//       {
-//         notification_subscription: subscription,
-//       }
-//     );
-
-//     let notifyMsg = JSON.stringify({
-//       title: "Login Successful",
-//       body: "Welcome ${user.name}",
-//     });
-
-//     const response = await sendPushNotification(subscription, notifyMsg);
-
-//     if (response.status === 1) {
-//       return res.status(200).send({
-//         status: 200,
-//         message: "Send Notification Successfully",
-//         response: response.response,
-//       });
-//     } else {
-//       return res.status(400).send({
-//         status: 400,
-//         message: "Error sending notification",
-//         error: response.err,
-//       });
-//     }
-//   } catch (error) {
-//     console.error("Error sending push notification:", error);
-//     return res.status(400).send({
-//       status: 400,
-//       message: "UnSubscribed",
-//     });
-//   }
-// };
-
 // firebase notifications subscribe function
 exports.subscribeForPushNotification = async (req, res) => {
   try {
@@ -188,32 +146,18 @@ exports.subscribeForPushNotification = async (req, res) => {
     const user = req.user;
     let userDetails = await User.findOne({ _id: user.id });
 
-    let subscriptionTokenExists = false;
-    if (userDetails.notification_subscription) {
-      if (userDetails.notification_subscription.length > 0) {
-        for (let subscriptionToken in userDetails.notification_subscription) {
-          if (subscriptionToken == registrationToken) {
-            subscriptionTokenExists = true;
-            break;
-          }
-        }
-      }
-    } else {
+    if (userDetails) {
       userDetails = await User.findOneAndUpdate(
         { _id: user.id },
         {
           notification_subscription: registrationToken,
         }
       );
-    }
-
-    if (!subscriptionTokenExists) {
-      userDetails = await User.findOneAndUpdate(
-        { _id: user.id },
-        {
-          $push: { notification_subscription: registrationToken },
-        }
-      );
+    } else {
+      return res.status(400).send({
+        status: 400,
+        message: "User Not Found",
+      });
     }
 
     const message = {

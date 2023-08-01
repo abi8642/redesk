@@ -143,7 +143,7 @@ router.get("/getLogs", requiredAuth(), getLogsByOrg);
 // Push notification subscribe route
 router.post(
   "/subscribeToNotification",
-  // requiredAuth(),
+  requiredAuth(),
   subscribeForPushNotification
 );
 

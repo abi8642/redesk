@@ -74,11 +74,11 @@ exports.createTask = async (req, res) => {
                 if (task.task_assignee) {
                   if (task.task_assignee.length > 0) {
                     for (const eachTaskAssignee of task.task_assignee) {
-                      if (eachTaskAssignee != user.id) {
+                      const eachTaskAssigneeData = await User.findOne({
+                        _id: eachTaskAssignee,
+                      });
+                      if (eachTaskAssignee + "" !== "" + user.id) {
                         sendTo.push(eachTaskAssignee);
-                        const eachTaskAssigneeData = await User.findOne({
-                          _id: eachTaskAssignee,
-                        });
 
                         // req.io
                         //   .to(eachTaskAssigneeData._id)
@@ -571,12 +571,11 @@ exports.editTask = async (req, res) => {
         if (docs.task_assignee) {
           if (docs.task_assignee.length > 0) {
             for (const eachTaskAssignee of docs.task_assignee) {
-              if (eachTaskAssignee != user.id) {
+              const eachTaskAssigneeData = await User.findOne({
+                _id: eachTaskAssignee,
+              });
+              if (eachTaskAssignee + "" !== "" + user.id) {
                 sendTo.push(eachTaskAssignee);
-                const eachTaskAssigneeData = await User.findOne({
-                  _id: eachTaskAssignee,
-                });
-
                 if (
                   eachTaskAssigneeData &&
                   eachTaskAssigneeData.notification_subscription
@@ -759,10 +758,10 @@ exports.changeTaskStatus = async (req, res) => {
       if (docs.task_assignee) {
         if (docs.task_assignee.length > 0) {
           for (let assignee of docs.task_assignee) {
-            if (assignee != user.id) {
-              const eachTaskAssigneeData = await User.findOne({
-                _id: assignee,
-              });
+            const eachTaskAssigneeData = await User.findOne({
+              _id: assignee,
+            });
+            if (assignee + "" !== "" + user.id) {
               sendTo.push(assignee);
 
               if (
@@ -915,11 +914,11 @@ exports.addTaskComment = async (req, res) => {
           if (docs.task_assignee) {
             if (docs.task_assignee.length > 0) {
               for (let assignee of docs.task_assignee) {
-                if (assignee != user.id) {
+                const eachTaskAssigneeData = await User.findOne({
+                  _id: assignee,
+                });
+                if (assignee + "" !== "" + user.id) {
                   sendTo.push(assignee);
-                  const eachTaskAssigneeData = await User.findOne({
-                    _id: assignee,
-                  });
                   if (
                     eachTaskAssigneeData &&
                     eachTaskAssigneeData.notification_subscription

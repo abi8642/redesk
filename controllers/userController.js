@@ -64,7 +64,7 @@ exports.verifyOtp = async (req, res) => {
       jwt.sign(
         { _id: user._id, email: user.email, organisation: orgs[0] },
         process.env.SECRET,
-        { expiresIn: "1d" },
+        { expiresIn: 60 * 10 },
         async (err, token) => {
           if (err) {
             return res.status(400).send({ status: "400", message: err });
@@ -139,7 +139,7 @@ exports.verifyOtp = async (req, res) => {
   }
 };
 
-// firebase notifications subscribe function
+// Subscribe to firebase push notifications
 exports.subscribeForPushNotification = async (req, res) => {
   try {
     const { registrationToken } = req.body;
@@ -237,12 +237,12 @@ exports.selectOrganization = async (req, res) => {
         for (let org of user.organisation_list) {
           if (organization == org._id) orgs.push(org);
         }
-        // console.log("orgs", orgs);
+        console.log("orgs", orgs);
 
         jwt.sign(
           { _id: user._id, email: user.email, organisation: orgs[0] },
           process.env.SECRET,
-          { expiresIn: "1d" },
+          { expiresIn: 60 * 10 },
           async (err, token) => {
             if (err) {
               return res.status(400).send({ status: "400", message: err });

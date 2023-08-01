@@ -19,11 +19,11 @@ exports.requiredAuth =
       if (err) {
         return res
           .status(401)
-          .send({ status: "401", message: "Unauthorized!" });
+          .send({ status: "401", message: "Invalid Token" });
       }
       // console.log(decoded.organisation, "decoded");
       if (role.length !== 0 && !role.includes(decoded.organisation.role)) {
-        return res.status(403).send({ error: 1, msg: "access denied." });
+        return res.status(403).send({ error: 403, msg: "access denied." });
       }
 
       // get user details using token
@@ -33,8 +33,8 @@ exports.requiredAuth =
 
       if (!result) {
         return res
-          .status(401)
-          .send({ status: "401", message: "Unauthorized!" });
+          .status(400)
+          .send({ status: "400", message: "User Not Found" });
       }
 
       // console.log(result);

@@ -40,9 +40,7 @@ exports.sendOtp = async (req, res) => {
 exports.verifyOtp = async (req, res) => {
   try {
     const { email, otp } = req.body;
-    const user = await User.findOne({ email }).populate(
-      "organisation_list.organisation"
-    );
+    const user = await User.findOne({ email });
 
     if (!user) {
       return res
@@ -64,7 +62,7 @@ exports.verifyOtp = async (req, res) => {
       jwt.sign(
         { _id: user._id, email: user.email, organisation: orgs[0] },
         process.env.SECRET,
-        { expiresIn: 60 * 10 },
+        { expiresIn: "1d" },
         async (err, token) => {
           if (err) {
             return res.status(400).send({ status: "400", message: err });
@@ -237,12 +235,11 @@ exports.selectOrganization = async (req, res) => {
         for (let org of user.organisation_list) {
           if (organization == org._id) orgs.push(org);
         }
-        console.log("orgs", orgs);
 
         jwt.sign(
           { _id: user._id, email: user.email, organisation: orgs[0] },
           process.env.SECRET,
-          { expiresIn: 60 * 10 },
+          { expiresIn: "1d" },
           async (err, token) => {
             if (err) {
               return res.status(400).send({ status: "400", message: err });
@@ -962,7 +959,6 @@ exports.changeUserRoles = async (req, res) => {
     const user = req.user;
     const condition = {
       _id: req.params.id,
-      "organisation_list.organisation": user.organisation.organisation,
     };
     const role = parseInt(req.body.role);
 
@@ -975,7 +971,7 @@ exports.changeUserRoles = async (req, res) => {
       }
     }
 
-    if (role > 6) {
+    if (role > 6 || role < 1) {
       return res.status(400).send({ status: "400", message: "Wrong Status" });
     }
     let newRole = config.user_role[role];

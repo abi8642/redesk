@@ -614,6 +614,7 @@ exports.createCategory = async (req, res) => {
 exports.allCategories = async (req, res) => {
   try {
     const user = req.user;
+    console.log("user", user);
     const categories = await Organisation.findOne(
       { _id: user.organisation.organisation },
       { projectCategories: 1 }

@@ -7,6 +7,7 @@ const Project = require("../models/project");
 const Task = require("../models/task");
 const xlsx = require("xlsx");
 const Log = require("../models/log");
+const { sendPushNotification } = require("../services/configPushNotification");
 
 exports.createOrganisation = async (req, res) => {
   try {
@@ -46,7 +47,7 @@ exports.createOrganisation = async (req, res) => {
           },
         ],
       });
-      user.save((err, user) => {
+      user.save(async (err, user) => {
         if (err) {
           return res.status(400).send({
             status: "500",
@@ -54,6 +55,29 @@ exports.createOrganisation = async (req, res) => {
             err,
           });
         }
+
+        const totalUserList = await User.find({
+          "organisation_list.organisation": orgsExistOrNot._id,
+        });
+        if (totalUserList) {
+          if (totalUserList.length > 0) {
+            for (let singleUser of totalUserList) {
+              if (singleUser && singleUser.notification_subscription) {
+                const message = {
+                  notification: {
+                    title: "New user Joined",
+                    body: `
+                   ${name} added as User in  ${orgsExistOrNot.organisation_name}`,
+                  },
+                  token: singleUser.notification_subscription,
+                };
+
+                await sendPushNotification(message);
+              }
+            }
+          }
+        }
+
         return res.status(201).send({
           status: "201",
           message: "Successfully added User to  Organisation",
@@ -469,6 +493,28 @@ exports.verifyInvitation = async (req, res) => {
               }
             );
 
+            const totalUserList = await User.find({
+              "organisation_list.organisation": decoded.organisationId,
+            });
+            if (totalUserList) {
+              if (totalUserList.length > 0) {
+                for (let singleUser of totalUserList) {
+                  if (singleUser && singleUser.notification_subscription) {
+                    const message = {
+                      notification: {
+                        title: "New user Joined",
+                        body: `
+                       ${name} added as User to  ${findOrganisation.organisation_name}`,
+                      },
+                      token: singleUser.notification_subscription,
+                    };
+
+                    await sendPushNotification(message);
+                  }
+                }
+              }
+            }
+
             return res.status(201).send({
               status: "201",
               message: "Successfully added User the to Organisation",
@@ -488,6 +534,28 @@ exports.verifyInvitation = async (req, res) => {
             ],
           });
           user.save();
+
+          const totalUserList = await User.find({
+            "organisation_list.organisation": decoded.organisationId,
+          });
+          if (totalUserList) {
+            if (totalUserList.length > 0) {
+              for (let singleUser of totalUserList) {
+                if (singleUser && singleUser.notification_subscription) {
+                  const message = {
+                    notification: {
+                      title: "New user Joined",
+                      body: `
+                     ${name} added as User to  ${findOrganisation.organisation_name}`,
+                    },
+                    token: singleUser.notification_subscription,
+                  };
+
+                  await sendPushNotification(message);
+                }
+              }
+            }
+          }
 
           return res.status(201).send({
             status: "201",

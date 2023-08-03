@@ -64,7 +64,7 @@ exports.verifyOtp = async (req, res) => {
       jwt.sign(
         { _id: user._id, email: user.email, organisation: orgs[0] },
         process.env.SECRET,
-        { expiresIn: 60 * 0.5 },
+        { expiresIn: 60 * 20 },
         async (err, token) => {
           if (err) {
             return res.status(400).send({ status: "400", message: err });
@@ -242,7 +242,7 @@ exports.selectOrganization = async (req, res) => {
         jwt.sign(
           { _id: user._id, email: user.email, organisation: orgs[0] },
           process.env.SECRET,
-          { expiresIn: 60 * 0.5 },
+          { expiresIn: 60 * 20 },
           async (err, token) => {
             if (err) {
               return res.status(400).send({ status: "400", message: err });

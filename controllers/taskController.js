@@ -872,17 +872,19 @@ exports.addTaskComment = async (req, res) => {
     if (comment) obj.comment = comment;
 
     obj.user = user.id;
-    if (req.files !== null && req.files.file) {
-      obj.type = "attachment";
-      obj.contentType = req.files.file.mimetype;
+    if (req.file) {
+      if (req.files !== null && req.files.file) {
+        obj.type = "attachment";
+        obj.contentType = req.files.file.mimetype;
 
-      await req.files.file.mv(
-        `${__dirname}/../public/images/${req.files.file.name}`,
-        (err) => {
-          if (err) console.log(err);
-        }
-      );
-      obj.file = `/images/${req.files.file.name}`;
+        await req.files.file.mv(
+          `${__dirname}/../public/images/${req.files.file.name}`,
+          (err) => {
+            if (err) console.log(err);
+          }
+        );
+        obj.file = `/images/${req.files.file.name}`;
+      }
     }
     TaskModel.findByIdAndUpdate(
       { _id: id },

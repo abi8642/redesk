@@ -1127,7 +1127,6 @@ exports.userEdit = async (req, res) => {
   }
 };
 
-// Approve or reject api access by the admin/subadmin only
 exports.userApproveOrReject = async (req, res) => {
   try {
     const user = req.user;

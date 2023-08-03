@@ -223,7 +223,7 @@ router.put("/taskEdit/:id", requiredAuth(), editTask);
 router.put("/taskClose/:id", requiredAuth(), closeTask);
 router.get(
   "/taskReminder/:id",
-  requiredAuth(["admin", "subadmin"]),
+  requiredAuth(["admin", "subadmin", "team_leader"]),
   reminderTask
 );
 router.get("/taskcount", requiredAuth(), getTaskCount);

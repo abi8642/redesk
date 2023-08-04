@@ -23,7 +23,11 @@ exports.sendOtp = async (req, res) => {
     }
     const otp = Math.floor(100000 + Math.random() * 900000);
 
-    sendMail(email, "OTP for login", `Your OTP for login is <b>${otp}</b>`);
+    await sendMail(
+      email,
+      "OTP for login",
+      `Your OTP for login is <b>${otp}</b>`
+    );
 
     const updateUser = await User.updateMany({ email }, { otp });
 

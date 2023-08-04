@@ -121,11 +121,16 @@ exports.verifyOtp = async (req, res) => {
           const otp = Math.floor(100000 + Math.random() * 900000);
           await User.updateMany({ email }, { otp });
 
+          const orgDetails = await User.findOne({ email }).populate(
+            "organisation_list.organisation",
+            "organisation_name _id"
+          );
+
           return res.status(200).send({
             status: "200",
             message: "Otp verified and Token generated",
             token: "Bearer " + token,
-            data: orgs,
+            data: orgDetails,
           });
         }
       );
@@ -808,6 +813,98 @@ exports.userDetails = (req, res) => {
   }
 };
 
+exports.getSingleUserData = async (req, res) => {
+  try {
+    const { userID } = req.params;
+    const user = req.user;
+    const userData = await User.findOne({ _id: userID });
+
+    if (!userData) {
+      return res.status(404).json({
+        status: "404",
+        message: "User not found",
+      });
+    }
+
+    const userProjectTaskList = {
+      _id: userData._id,
+      pic: userData.pic,
+      name: userData.name,
+      email: userData.email,
+      projectDetails: [],
+    };
+    let orgs = [];
+
+    for (let org of userData.organisation_list) {
+      if (req.user.organisation.organisation == org.organisation)
+        orgs.push(org);
+    }
+    userProjectTaskList.role = orgs[0].role;
+    userProjectTaskList.status = orgs[0].status;
+
+    const projectList = await project.find({
+      $or: [
+        { project_assignee: userData._id },
+        { project_leader: userData._id },
+        { created_by: userData._id },
+      ],
+    });
+
+    if (projectList) userProjectTaskList.projectCount = projectList.length;
+
+    if (
+      user.organisation.role === "admin" ||
+      user.organisation.role === "subadmin"
+    ) {
+      if (projectList) {
+        for (const eachProject of projectList) {
+          const taskList = await task.find({
+            $and: [
+              { project_id: eachProject._id },
+              {
+                $or: [
+                  { task_assignee: userData._id },
+                  { created_by: userData._id },
+                ],
+              },
+            ],
+          });
+          const projectWithTasks = {
+            _id: eachProject._id,
+            name: eachProject.name,
+            description: eachProject.description,
+            project_status: eachProject.project_status,
+            category: eachProject.project_category,
+            project_client: eachProject.project_client,
+            project_start_date: eachProject.project_start_date,
+            project_end_date: eachProject.project_end_date,
+            project_no: eachProject.project_no,
+            created_by: eachProject.created_by,
+            project_leader: eachProject.project_leader,
+            project_assignee: eachProject.project_assignee,
+            taskList: taskList,
+          };
+
+          userProjectTaskList.projectDetails.push(projectWithTasks);
+        }
+      }
+    } else {
+      userProjectTaskList.projectDetails = projectList;
+    }
+
+    return res.status(200).json({
+      status: "200",
+      message: "Success",
+      data: userProjectTaskList,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      status: "500",
+      message: "Internal Server Error" + error,
+    });
+  }
+};
+
 exports.allUserFromOrgs = (req, res) => {
   try {
     const user = req.user;
@@ -1008,6 +1105,43 @@ exports.changeUserRoles = async (req, res) => {
         };
         logs.organisation_id = user.organisation.organisation;
         await Log.create(logs);
+
+        const totalUserList = await User.find({
+          $and: [
+            {
+              "organisation_list.organisation": user.organisation.organisation,
+            },
+            {
+              $or: [
+                {
+                  "organisation_list.role": "admin",
+                },
+                {
+                  "organisation_list.role": "subadmin",
+                },
+              ],
+            },
+          ],
+        });
+        if (totalUserList) {
+          if (totalUserList.length > 0) {
+            for (let singleUser of totalUserList) {
+              if (singleUser._id + "" != "" + user.id) {
+                if (singleUser && singleUser.notification_subscription) {
+                  const message = {
+                    notification: {
+                      title: "User Role Changed",
+                      body: `User ${getUser.name}'s Role changed from ${oldRole} to ${newRole} by ${user.name}`,
+                    },
+                    token: singleUser.notification_subscription,
+                  };
+
+                  await sendPushNotification(message);
+                }
+              }
+            }
+          }
+        }
 
         return res
           .status(200)
@@ -1308,6 +1442,45 @@ exports.createObserver = async (req, res) => {
           logs.organisation_id = user.organisation.organisation;
           await Log.create(logs);
 
+          const totalUserList = await User.find({
+            $and: [
+              {
+                "organisation_list.organisation":
+                  user.organisation.organisation,
+              },
+              {
+                $or: [
+                  {
+                    "organisation_list.role": "admin",
+                  },
+                  {
+                    "organisation_list.role": "subadmin",
+                  },
+                ],
+              },
+            ],
+          });
+          if (totalUserList) {
+            if (totalUserList.length > 0) {
+              for (let singleUser of totalUserList) {
+                if (singleUser._id + "" != "" + user.id) {
+                  if (singleUser && singleUser.notification_subscription) {
+                    const message = {
+                      notification: {
+                        title: "New Observer Added",
+                        body: `
+             ${userExist.name} added as Observer by ${user.name}`,
+                      },
+                      token: singleUser.notification_subscription,
+                    };
+
+                    await sendPushNotification(message);
+                  }
+                }
+              }
+            }
+          }
+
           return res.status(201).send({
             status: "201",
             message: "Successfully added User the to Organisation",
@@ -1335,13 +1508,51 @@ exports.createObserver = async (req, res) => {
           id: result._id,
           name: result.name,
         };
-        logs.message = "Observer Created";
+        logs.message = "Observer Added";
         logs.log_by = {
           id: user.id,
           name: user.name,
         };
         logs.organisation_id = user.organisation.organisation;
         await Log.create(logs);
+
+        const totalUserList = await User.find({
+          $and: [
+            {
+              "organisation_list.organisation": user.organisation.organisation,
+            },
+            {
+              $or: [
+                {
+                  "organisation_list.role": "admin",
+                },
+                {
+                  "organisation_list.role": "subadmin",
+                },
+              ],
+            },
+          ],
+        });
+        if (totalUserList) {
+          if (totalUserList.length > 0) {
+            for (let singleUser of totalUserList) {
+              if (singleUser._id + "" != "" + user.id) {
+                if (singleUser && singleUser.notification_subscription) {
+                  const message = {
+                    notification: {
+                      title: "New Observer Added",
+                      body: `
+           ${req.body.name} added as Observer by ${user.name}`,
+                    },
+                    token: singleUser.notification_subscription,
+                  };
+
+                  await sendPushNotification(message);
+                }
+              }
+            }
+          }
+        }
 
         res.status(201).send({
           status: "201",
@@ -1448,13 +1659,51 @@ exports.createClient = async (req, res) => {
           id: findUser._id,
           name: findUser.name,
         };
-        logs.message = "Client Created";
+        logs.message = "Client Added";
         logs.log_by = {
           id: user.id,
           name: user.name,
         };
         logs.organisation_id = user.organisation.organisation;
         await Log.create(logs);
+
+        const totalUserList = await User.find({
+          $and: [
+            {
+              "organisation_list.organisation": user.organisation.organisation,
+            },
+            {
+              $or: [
+                {
+                  "organisation_list.role": "admin",
+                },
+                {
+                  "organisation_list.role": "subadmin",
+                },
+              ],
+            },
+          ],
+        });
+        if (totalUserList) {
+          if (totalUserList.length > 0) {
+            for (let singleUser of totalUserList) {
+              if (singleUser._id + "" != "" + user.id) {
+                if (singleUser && singleUser.notification_subscription) {
+                  const message = {
+                    notification: {
+                      title: "New Client Added",
+                      body: `
+           ${findUser.name} added as Client by ${user.name}`,
+                    },
+                    token: singleUser.notification_subscription,
+                  };
+
+                  await sendPushNotification(message);
+                }
+              }
+            }
+          }
+        }
 
         return res.status(201).send({
           status: "201",
@@ -1483,13 +1732,51 @@ exports.createClient = async (req, res) => {
         id: result._id,
         name: result.name,
       };
-      logs.message = "Client Created";
+      logs.message = "Client Added";
       logs.log_by = {
         id: user.id,
         name: user.name,
       };
       logs.organisation_id = user.organisation.organisation;
       await Log.create(logs);
+
+      const totalUserList = await User.find({
+        $and: [
+          {
+            "organisation_list.organisation": user.organisation.organisation,
+          },
+          {
+            $or: [
+              {
+                "organisation_list.role": "admin",
+              },
+              {
+                "organisation_list.role": "subadmin",
+              },
+            ],
+          },
+        ],
+      });
+      if (totalUserList) {
+        if (totalUserList.length > 0) {
+          for (let singleUser of totalUserList) {
+            if (singleUser._id + "" != "" + user.id) {
+              if (singleUser && singleUser.notification_subscription) {
+                const message = {
+                  notification: {
+                    title: "New Client Added",
+                    body: `
+         ${req.body.name} added as Client by ${user.name}`,
+                  },
+                  token: singleUser.notification_subscription,
+                };
+
+                await sendPushNotification(message);
+              }
+            }
+          }
+        }
+      }
 
       return res.status(201).send({
         status: "201",
@@ -1595,7 +1882,6 @@ exports.createSubAdmin = async (req, res) => {
             id: userExist._id,
             name: userExist.name,
           };
-
           logs.message = "Subadmin Created";
           logs.log_by = {
             id: user.id,
@@ -1603,6 +1889,45 @@ exports.createSubAdmin = async (req, res) => {
           };
           logs.organisation_id = user.organisation.organisation;
           await Log.create(logs);
+
+          const totalUserList = await User.find({
+            $and: [
+              {
+                "organisation_list.organisation":
+                  user.organisation.organisation,
+              },
+              {
+                $or: [
+                  {
+                    "organisation_list.role": "admin",
+                  },
+                  {
+                    "organisation_list.role": "subadmin",
+                  },
+                ],
+              },
+            ],
+          });
+          if (totalUserList) {
+            if (totalUserList.length > 0) {
+              for (let singleUser of totalUserList) {
+                if (singleUser._id + "" != "" + user.id) {
+                  if (singleUser && singleUser.notification_subscription) {
+                    const message = {
+                      notification: {
+                        title: "New Subadmin Added",
+                        body: `
+             ${userExist.name} added as Subadmin by ${user.name}`,
+                      },
+                      token: singleUser.notification_subscription,
+                    };
+
+                    await sendPushNotification(message);
+                  }
+                }
+              }
+            }
+          }
 
           return res.status(201).send({
             status: "201",
@@ -1638,6 +1963,45 @@ exports.createSubAdmin = async (req, res) => {
         };
         logs.organisation_id = user.organisation.organisation;
         await Log.create(logs);
+
+        const totalUserList = await User.find({
+          $and: [
+            {
+              "organisation_list.organisation": user.organisation.organisation,
+            },
+            {
+              $or: [
+                {
+                  "organisation_list.role": "admin",
+                },
+                {
+                  "organisation_list.role": "subadmin",
+                },
+              ],
+            },
+          ],
+        });
+        if (totalUserList) {
+          if (totalUserList.length > 0) {
+            for (let singleUser of totalUserList) {
+              if (singleUser._id + "" != "" + user.id) {
+                console.log("single user", singleUser);
+                if (singleUser && singleUser.notification_subscription) {
+                  const message = {
+                    notification: {
+                      title: "New Subadmin Added",
+                      body: `
+             ${userExist.name} added as Subadmin by ${user.name}`,
+                    },
+                    token: singleUser.notification_subscription,
+                  };
+
+                  await sendPushNotification(message);
+                }
+              }
+            }
+          }
+        }
 
         res.status(201).send({
           status: "201",

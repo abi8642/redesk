@@ -13,6 +13,7 @@ const {
   signout,
   getUser,
   userDetails,
+  getSingleUserData,
   getLoginUser,
   userEdit,
   userApproveOrReject,
@@ -161,6 +162,7 @@ router.get(
   requiredAuth(["admin", "subadmin"]),
   userDetails
 );
+router.get("/getUserData/:userID", requiredAuth(), getSingleUserData);
 router.get(
   "/teamLeader",
   requiredAuth(["admin", "subadmin", "team_leader"]),

@@ -4,7 +4,6 @@ let config = {
     0: "rejected",
     2: "pending",
   },
-  //["user", "admin", "team_leader", "observer"],
   user_role: {
     1: "admin",
     2: "subadmin",
@@ -26,6 +25,10 @@ let config = {
     2: "HOLD",
     3: "COMPLETED",
     4: "INACTIVE",
+  },
+  log_type: {
+    1: "insert",
+    2: "update",
   },
 };
 

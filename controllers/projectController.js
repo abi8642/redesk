@@ -1,4 +1,3 @@
-const busboy = require("busboy");
 const projectModel = require("../models/project");
 const User = require("../models/user");
 const taskModel = require("../models/task");
@@ -53,6 +52,18 @@ exports.createProject = async (req, res) => {
         };
         logs.organisation_id = user.organisation.organisation;
         await Log.create(logs);
+
+        let log = {
+          date_time: new Date(),
+          log_type: 1,
+          log_message: `New project ${project.project_name} created by ${user.name}\nStatus: ${project.project_status} Priority: ${project.project_priority}`,
+          request: req.body,
+          response: project,
+          log_by: user.id,
+          organisation_id: user.organisation.organisation,
+        };
+
+        await Log.create(log);
 
         let sendTo = [];
         let sendToAdmin = [];
@@ -592,22 +603,18 @@ exports.editProject = async (req, res) => {
             .send({ status: "400", message: "Failed to Update" });
         }
 
-        const logs = {};
-        logs.date_time = new Date();
-        logs.collection_name = "projects";
-        logs.document_data = {
-          id: docs._id,
-          name: docs.project_name,
+        let log = {
+          date_time: new Date(),
+          log_type: 2,
+          log_message: `Project ${docs.project_name} is Updated by ${user.name}`,
+          before_update: getProject,
+          request: req.body,
+          response: docs,
+          log_by: user.id,
+          organisation_id: user.organisation.organisation,
         };
-        logs.message = "Project Updated";
-        logs.before_change = getProject;
-        logs.after_change = req.body;
-        logs.log_by = {
-          id: user.id,
-          name: user.name,
-        };
-        logs.organisation_id = user.organisation.organisation;
-        await Log.create(logs);
+
+        await Log.create(log);
 
         let sendTo = [];
         const totalUserList = await User.find({
@@ -843,22 +850,18 @@ exports.changeProjectStatus = async (req, res) => {
             .send({ status: "400", message: "Failed to Update" });
         }
 
-        const logs = {};
-        logs.date_time = new Date();
-        logs.collection_name = "projects";
-        logs.document_data = {
-          id: docs._id,
-          name: docs.project_name,
+        let log = {
+          date_time: new Date(),
+          log_type: 2,
+          log_message: `Project ${docs.project_name}'s status changes from ${getProject.project_status} to ${docs.project_status} by ${user.name}`,
+          before_update: getProject.project_status,
+          request: update.project_status,
+          response: docs,
+          log_by: user.id,
+          organisation_id: user.organisation.organisation,
         };
-        logs.message = "Project Status Changed";
-        logs.before_change = getProject.project_status;
-        logs.after_change = update.project_status;
-        logs.log_by = {
-          id: user.id,
-          name: user.name,
-        };
-        logs.organisation_id = user.organisation.organisation;
-        await Log.create(logs);
+
+        await Log.create(log);
 
         let sendTo = [];
         const totalUserList = await User.find({
@@ -1171,22 +1174,18 @@ exports.assignProject = async (req, res) => {
       { project_assignee: 1, _id: 1, project_name: 1 }
     );
 
-    const logs = {};
-    logs.date_time = new Date();
-    logs.collection_name = "projects";
-    logs.document_data = {
-      id: updatedProject._id,
-      name: updatedProject.project_name,
+    let log = {
+      date_time: new Date(),
+      log_type: 2,
+      log_message: `Update Project ${docs.project_name}'s Assignee by ${user.name}`,
+      before_update: project.project_assignee,
+      request: req.body,
+      response: updatedProject.project_assignee,
+      log_by: user.id,
+      organisation_id: user.organisation.organisation,
     };
-    logs.message = "Update Project Assignee";
-    logs.before_change = project.project_assignee;
-    logs.after_change = updatedProject.project_assignee;
-    logs.log_by = {
-      id: user.id,
-      name: user.name,
-    };
-    logs.organisation_id = user.organisation.organisation;
-    await Log.create(logs);
+
+    await Log.create(log);
 
     return res.status(200).send({
       status: "200",
@@ -1321,22 +1320,18 @@ exports.assignTeamLeader = async (req, res) => {
       { project_leader: 1, _id: 1, project_name: 1 }
     );
 
-    const logs = {};
-    logs.date_time = new Date();
-    logs.collection_name = "projects";
-    logs.document_data = {
-      id: updatedProject._id,
-      name: updatedProject.project_name,
+    let log = {
+      date_time: new Date(),
+      log_type: 2,
+      log_message: `Update Project ${docs.project_name}'s Leader by ${user.name}`,
+      before_update: project.project_leader,
+      request: req.body,
+      response: updatedProject.project_leader,
+      log_by: user.id,
+      organisation_id: user.organisation.organisation,
     };
-    logs.message = "Update Project Assignee";
-    logs.before_change = project.project_leader;
-    logs.after_change = updatedProject.project_leader;
-    logs.log_by = {
-      id: user.id,
-      name: user.name,
-    };
-    logs.organisation_id = user.organisation.organisation;
-    await Log.create(logs);
+
+    await Log.create(log);
 
     return res.status(200).send({
       status: "200",
@@ -1414,22 +1409,17 @@ exports.addProjectAttachment = async (req, res) => {
             });
           }
 
-          const logs = {};
-          logs.date_time = new Date();
-          logs.collection_name = "projects";
-          logs.document_data = {
-            id: docs._id,
-            name: docs.project_name,
+          let log = {
+            date_time: new Date(),
+            log_type: 2,
+            log_message: `New Attachment added on Project ${docs.project_name} by ${user.name}`,
+            request: uploadedFile,
+            response: { fileUrl: url },
+            log_by: user.id,
+            organisation_id: user.organisation.organisation,
           };
-          logs.message = "Add Project Attachment";
-          logs.before_change = project.project_attachments;
-          logs.after_change = docs.project_attachments;
-          logs.log_by = {
-            id: user.id,
-            name: user.name,
-          };
-          logs.organisation_id = user.organisation.organisation;
-          await Log.create(logs);
+
+          await Log.create(log);
 
           return res.status(200).json({
             status: 200,
@@ -1493,22 +1483,17 @@ exports.deleteProjectAttachment = async (req, res) => {
               .send({ status: "400", message: "Failed to Update" });
           }
 
-          const logs = {};
-          logs.date_time = new Date();
-          logs.collection_name = "projects";
-          logs.document_data = {
-            id: docs._id,
-            name: docs.project_name,
+          let log = {
+            date_time: new Date(),
+            log_type: 2,
+            log_message: `One Attachment deleted from Project ${docs.project_name} by ${user.name}`,
+            request: req.body,
+            response: { message: "Requested attachment deleted" },
+            log_by: user.id,
+            organisation_id: user.organisation.organisation,
           };
-          logs.message = "Delete Project Attachment";
-          logs.before_change = project.project_attachments;
-          logs.after_change = docs.project_attachments;
-          logs.log_by = {
-            id: user.id,
-            name: user.name,
-          };
-          logs.organisation_id = user.organisation.organisation;
-          await Log.create(logs);
+
+          await Log.create(log);
 
           return res.status(200).send({
             status: "200",
@@ -1527,8 +1512,6 @@ exports.deleteProjectAttachment = async (req, res) => {
 
 exports.projectEfficiency = async (req, res) => {
   try {
-    const user = req.user;
-
     taskModel.find(
       { project_id: req.params.id },
       "task_status",
@@ -1564,13 +1547,8 @@ exports.projectEfficiency = async (req, res) => {
                 break;
             }
           }
-          let totalTask =
-            obj.active +
-            obj.in_progress +
-            obj.qa +
-            obj.completed +
-            obj.confirmed;
-          let efficiency = Math.round((obj.confirmed / totalTask) * 100);
+          let totalTask = obj.active + obj.in_progress + obj.qa + obj.completed;
+          let efficiency = Math.round((obj.completed / totalTask) * 100);
 
           return res.status(200).send({
             status: "200",

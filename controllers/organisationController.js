@@ -59,9 +59,14 @@ exports.createOrganisation = async (req, res) => {
         let log = {
           date_time: new Date(),
           log_type: 1,
-          log_message: `${name} added as User in our organization`,
+          log_heading: "New User Joined",
+          log_message: `${name} joined as User in our organization`,
           request: req.body,
           response: userDoc,
+          log_for: {
+            id: userDoc._id,
+            name: userDoc.name,
+          },
           log_by: userDoc._id,
           organisation_id: orgsExistOrNot._id,
         };
@@ -532,9 +537,14 @@ exports.verifyInvitation = async (req, res) => {
             let log = {
               date_time: new Date(),
               log_type: 1,
-              log_message: `${name} added as User to our organization`,
+              log_heading: "New User Joined",
+              log_message: `${name} joined as User in our organization`,
               request: req.body,
               response: userDoc,
+              log_for: {
+                id: userDoc._id,
+                name: userDoc.name,
+              },
               log_by: userDoc._id,
               organisation_id: decoded.organisationId,
             };
@@ -586,9 +596,14 @@ exports.verifyInvitation = async (req, res) => {
           let log = {
             date_time: new Date(),
             log_type: 1,
-            log_message: `${name} added as User to our organization`,
+            log_heading: "New User Joined",
+            log_message: `${name} joined as User in our organization`,
             request: req.body,
             response: userDoc,
+            log_for: {
+              id: userDoc._id,
+              name: userDoc.name,
+            },
             log_by: userDoc._id,
             organisation_id: decoded.organisationId,
           };
@@ -747,11 +762,16 @@ exports.createCategory = async (req, res) => {
     let log = {
       date_time: new Date(),
       log_type: 1,
+      log_heading: "New Category Added",
       log_message: `New category ${name.toUpperCase().trim()} created by ${
         user.name
       }`,
       request: req.body,
       response: newCategory,
+      log_for: {
+        id: newCategory._id,
+        name: newCategory.organisation_name,
+      },
       log_by: user.id,
       organisation_id: user.organisation.organisation,
     };
@@ -891,12 +911,17 @@ exports.editCategory = async (req, res) => {
     let log = {
       date_time: new Date(),
       log_type: 2,
+      log_heading: "Category Updated",
       log_message: `Category updated from ${oldName
         .toUpperCase()
         .trim()} to ${oldName.toUpperCase().trim()} by ${user.name}`,
       before_update: { categoryName: oldName },
       request: req.body,
       response: { categoryName: newName },
+      log_for: {
+        id: newCategory._id,
+        name: newCategory.organisation_name,
+      },
       log_by: user.id,
       organisation_id: user.organisation.organisation,
     };

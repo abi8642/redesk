@@ -10,6 +10,10 @@ const logsSchema = new Schema({
     type: String,
     required: true,
   },
+  log_heading: {
+    type: String,
+    required: true,
+  },
   log_message: {
     type: String,
     required: true,
@@ -23,6 +27,10 @@ const logsSchema = new Schema({
   },
   response: {
     type: Object,
+  },
+  log_for: {
+    type: Object,
+    required: true,
   },
   log_by: {
     type: mongoose.Schema.Types.ObjectId,

@@ -37,28 +37,17 @@ exports.createProject = async (req, res) => {
     projectModel
       .create(req.body)
       .then(async (project) => {
-        const logs = {};
-        logs.date_time = new Date();
-        logs.collection_name = "projects";
-        logs.document_data = {
-          id: project._id,
-          name: project.project_name,
-        };
-        logs.message = "New Project Created";
-        logs.after_change = project;
-        logs.log_by = {
-          id: user.id,
-          name: user.name,
-        };
-        logs.organisation_id = user.organisation.organisation;
-        await Log.create(logs);
-
         let log = {
           date_time: new Date(),
           log_type: 1,
+          log_heading: "Project Created",
           log_message: `New project ${project.project_name} created by ${user.name}\nStatus: ${project.project_status} Priority: ${project.project_priority}`,
           request: req.body,
           response: project,
+          log_for: {
+            id: project._id,
+            name: project.project_name,
+          },
           log_by: user.id,
           organisation_id: user.organisation.organisation,
         };
@@ -606,10 +595,15 @@ exports.editProject = async (req, res) => {
         let log = {
           date_time: new Date(),
           log_type: 2,
+          log_heading: "Project Updated",
           log_message: `Project ${docs.project_name} is Updated by ${user.name}`,
           before_update: getProject,
           request: req.body,
           response: docs,
+          log_for: {
+            id: docs._id,
+            name: docs.project_name,
+          },
           log_by: user.id,
           organisation_id: user.organisation.organisation,
         };
@@ -853,10 +847,15 @@ exports.changeProjectStatus = async (req, res) => {
         let log = {
           date_time: new Date(),
           log_type: 2,
+          log_heading: "Project Status Changed",
           log_message: `Project ${docs.project_name}'s status changes from ${getProject.project_status} to ${docs.project_status} by ${user.name}`,
           before_update: getProject.project_status,
           request: update.project_status,
           response: docs,
+          log_for: {
+            id: docs._id,
+            name: docs.project_name,
+          },
           log_by: user.id,
           organisation_id: user.organisation.organisation,
         };
@@ -1177,10 +1176,15 @@ exports.assignProject = async (req, res) => {
     let log = {
       date_time: new Date(),
       log_type: 2,
+      log_heading: "Project Assignee Updated",
       log_message: `Update Project ${docs.project_name}'s Assignee by ${user.name}`,
       before_update: project.project_assignee,
       request: req.body,
       response: updatedProject.project_assignee,
+      log_for: {
+        id: docs._id,
+        name: docs.project_name,
+      },
       log_by: user.id,
       organisation_id: user.organisation.organisation,
     };
@@ -1323,10 +1327,15 @@ exports.assignTeamLeader = async (req, res) => {
     let log = {
       date_time: new Date(),
       log_type: 2,
+      log_heading: "Project Leader Updated",
       log_message: `Update Project ${docs.project_name}'s Leader by ${user.name}`,
       before_update: project.project_leader,
       request: req.body,
       response: updatedProject.project_leader,
+      log_for: {
+        id: docs._id,
+        name: docs.project_name,
+      },
       log_by: user.id,
       organisation_id: user.organisation.organisation,
     };
@@ -1412,9 +1421,14 @@ exports.addProjectAttachment = async (req, res) => {
           let log = {
             date_time: new Date(),
             log_type: 2,
+            log_heading: "New Attachment Added",
             log_message: `New Attachment added on Project ${docs.project_name} by ${user.name}`,
             request: uploadedFile,
             response: { fileUrl: url },
+            log_for: {
+              id: docs._id,
+              name: docs.project_name,
+            },
             log_by: user.id,
             organisation_id: user.organisation.organisation,
           };
@@ -1486,9 +1500,14 @@ exports.deleteProjectAttachment = async (req, res) => {
           let log = {
             date_time: new Date(),
             log_type: 2,
+            log_heading: "One Attachment Deleted",
             log_message: `One Attachment deleted from Project ${docs.project_name} by ${user.name}`,
             request: req.body,
             response: { message: "Requested attachment deleted" },
+            log_for: {
+              id: docs._id,
+              name: docs.project_name,
+            },
             log_by: user.id,
             organisation_id: user.organisation.organisation,
           };

@@ -149,10 +149,15 @@ exports.subscribeForPushNotification = async (req, res) => {
       let log = {
         date_time: new Date(),
         log_type: 2,
+        log_heading: "User Notification Token Added",
         log_message: `${result.name}'s notification token updated`,
         before_update: userDetails.notification_subscription,
         request: req.body,
         response: newUserDetails.notification_subscription,
+        log_for: {
+          id: userDetails._id,
+          name: userDetails.name,
+        },
         log_by: user.id,
         organisation_id: user.organisation.organisation,
       };
@@ -1095,10 +1100,15 @@ exports.changeUserRoles = async (req, res) => {
         let log = {
           date_time: new Date(),
           log_type: 2,
+          log_heading: "User Role Updated",
           log_message: `User ${getUser.name}'s Role changed from ${oldRole} to ${newRole} by ${user.name}`,
           before_update: oldRole,
           request: { role: newRole },
           response: docs,
+          log_for: {
+            id: docs._id,
+            name: docs.name,
+          },
           log_by: user.id,
           organisation_id: user.organisation.organisation,
         };
@@ -1231,10 +1241,15 @@ exports.userEdit = async (req, res) => {
         let log = {
           date_time: new Date(),
           log_type: 2,
+          log_heading: "User Profile Updated",
           log_message: `User ${result.name}'s profile updated`,
           before_update: getUser,
           request: req.body,
           response: docs,
+          log_for: {
+            id: DecompressionStream._id,
+            name: DecompressionStream.name,
+          },
           log_by: user.id,
           organisation_id: user.organisation.organisation,
         };
@@ -1299,10 +1314,15 @@ exports.userApproveOrReject = async (req, res) => {
           let log = {
             date_time: new Date(),
             log_type: 2,
+            log_heading: "User Status Changed",
             log_message: `User ${result.name}'s status changed from ${oldStatus} to ${status} by ${user.name}`,
             before_update: oldStatus,
             request: { status: status },
             response: result,
+            log_for: {
+              id: result._id,
+              name: result.name,
+            },
             log_by: user.id,
             organisation_id: user.organisation.organisation,
           };
@@ -1460,9 +1480,14 @@ exports.createObserver = async (req, res) => {
           let log = {
             date_time: new Date(),
             log_type: 1,
+            log_heading: "Observer Added",
             log_message: `${userExist.name} added as Observer by ${user.name}`,
             request: req.body,
             response: userDoc,
+            log_for: {
+              id: userDoc._id,
+              name: userDoc.name,
+            },
             log_by: user.id,
             organisation_id: user.organisation.organisation,
           };
@@ -1530,9 +1555,14 @@ exports.createObserver = async (req, res) => {
         let log = {
           date_time: new Date(),
           log_type: 1,
+          log_heading: "Observer Added",
           log_message: `${req.body.name} added as Observer by ${user.name}`,
           request: req.body,
           response: result,
+          log_for: {
+            id: result._id,
+            name: result.name,
+          },
           log_by: user.id,
           organisation_id: user.organisation.organisation,
         };
@@ -1677,9 +1707,14 @@ exports.createClient = async (req, res) => {
         let log = {
           date_time: new Date(),
           log_type: 1,
+          log_heading: "Client Added",
           log_message: `${findUser.name} added as Client by ${user.name}`,
           request: req.body,
           response: userDoc,
+          log_for: {
+            id: userDoc._id,
+            name: userDoc.name,
+          },
           log_by: user.id,
           organisation_id: user.organisation.organisation,
         };
@@ -1746,9 +1781,14 @@ exports.createClient = async (req, res) => {
       let log = {
         date_time: new Date(),
         log_type: 1,
+        log_heading: "Client Added",
         log_message: `${req.body.name} added as Client by ${user.name}`,
         request: req.body,
         response: result,
+        log_for: {
+          id: result._id,
+          name: result.name,
+        },
         log_by: user.id,
         organisation_id: user.organisation.organisation,
       };
@@ -1892,9 +1932,14 @@ exports.createSubAdmin = async (req, res) => {
           let log = {
             date_time: new Date(),
             log_type: 1,
+            log_heading: "Subadmin Added",
             log_message: `${userExist.name} added as Subadmin by ${user.name}`,
             request: req.body,
             response: userDoc,
+            log_for: {
+              id: userDoc._id,
+              name: userDoc.name,
+            },
             log_by: user.id,
             organisation_id: user.organisation.organisation,
           };
@@ -1962,9 +2007,14 @@ exports.createSubAdmin = async (req, res) => {
         let log = {
           date_time: new Date(),
           log_type: 1,
+          log_heading: "Subadmin Added",
           log_message: `${req.body.name} added as Subadmin by ${user.name}`,
           request: req.body,
           response: result,
+          log_for: {
+            id: result._id,
+            name: result.name,
+          },
           log_by: user.id,
           organisation_id: user.organisation.organisation,
         };

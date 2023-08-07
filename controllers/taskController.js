@@ -54,9 +54,15 @@ exports.createTask = async (req, res) => {
                 let log = {
                   date_time: new Date(),
                   log_type: 1,
+                  log_heading: "Task Created",
                   log_message: `New task "${task.task_name}" of ${projectDetails.project_name} project created by ${user.name}`,
                   request: payload,
                   response: task,
+                  log_for: {
+                    id: task._id,
+                    name: task.task_name,
+                    project_id: task.project_id,
+                  },
                   log_by: user.id,
                   organisation_id: user.organisation.organisation,
                 };
@@ -700,10 +706,16 @@ exports.editTask = async (req, res) => {
         let log = {
           date_time: new Date(),
           log_type: 2,
+          log_heading: "Task Updated",
           log_message: `Task "${docs.task_name}" of ${projectDetails.project_name} project is Updated by ${user.name}`,
           before_update: getTask,
           request: req.body,
           response: docs,
+          log_for: {
+            id: docs._id,
+            name: docs.task_name,
+            project_id: docs.project_id,
+          },
           log_by: user.id,
           organisation_id: user.organisation.organisation,
         };
@@ -972,6 +984,7 @@ exports.changeTaskStatus = async (req, res) => {
       let log = {
         date_time: new Date(),
         log_type: 2,
+        log_heading: "Task Status Changed",
         log_message: `"${docs.task_name}" task of ${
           projectDetails.project_name
         } project's status changed from ${
@@ -980,6 +993,11 @@ exports.changeTaskStatus = async (req, res) => {
         before_update: { status: config.task_status[getTask.task_status] },
         request: { status: config.task_status[status] },
         response: { status: config.task_status[status] },
+        log_for: {
+          id: docs._id,
+          name: docs.task_name,
+          project_id: docs.project_id,
+        },
         log_by: user.id,
         organisation_id: user.organisation.organisation,
       };
@@ -1256,9 +1274,15 @@ exports.addTaskComment = async (req, res) => {
           let log = {
             date_time: new Date(),
             log_type: 1,
+            log_heading: "Comment Added",
             log_message: `Comment added on "${docs.task_name}" task of ${projectDetails.project_name} project by ${user.name}`,
             request: obj,
             response: obj,
+            log_for: {
+              id: docs._id,
+              name: docs.task_name,
+              project_id: docs.project_id,
+            },
             log_by: user.id,
             organisation_id: user.organisation.organisation,
           };

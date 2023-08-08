@@ -7,7 +7,10 @@ exports.accessChat = async (req, res) => {
 
   if (!userId) {
     console.log("UserId param not sent with request");
-    return res.sendStatus(400);
+    return res.status(400).json({
+      status: 400,
+      message: "User ID required",
+    });
   }
 
   var isChat = await Chat.find({
@@ -20,10 +23,12 @@ exports.accessChat = async (req, res) => {
     .populate("users", "-password")
     .populate("latestMessage");
 
-  // console.log("ischat", isChat);
-
   if (isChat.length > 0) {
-    return res.send(isChat[0]);
+    return res.status(200).json({
+      status: 200,
+      message: "Chat Fetched",
+      chat: isChat[0],
+    });
   } else {
     var chatData = {
       chatName: "sender",
@@ -39,12 +44,13 @@ exports.accessChat = async (req, res) => {
       );
       return res.status(200).json({
         status: 200,
-        msg: FullChat,
+        message: "Chat Fetched",
+        chat: FullChat,
       });
     } catch (error) {
-      return res.status(400).json({
-        status: 400,
-        msg: "error" + error,
+      return res.status(500).json({
+        status: 500,
+        msg: "Failed to fetch chat data" + error,
       });
     }
   }
@@ -63,12 +69,17 @@ exports.fetchChats = async (req, res) => {
           select: "name pic email",
         });
         res.status(200).send(results);
-        console.log("results", results);
-        // console.log("object", req.user.id);
+        return res.status(200).json({
+          status: 200,
+          message: "Chat List Fetched",
+          results,
+        });
       });
   } catch (error) {
-    res.status(400).json({ message: error });
-    throw new Error(error.message);
+    return res.status(500).json({
+      status: 500,
+      msg: "Failed to fetch Chat List" + error,
+    });
   }
 };
 

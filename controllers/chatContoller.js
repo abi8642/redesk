@@ -68,7 +68,6 @@ exports.fetchChats = async (req, res) => {
           path: "latestMessage.sender",
           select: "name pic email",
         });
-        res.status(200).send(results);
         return res.status(200).json({
           status: 200,
           message: "Chat List Fetched",

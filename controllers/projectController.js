@@ -6,6 +6,7 @@ const fs = require("fs");
 const Notification = require("../models/notification");
 const { sendMail } = require("../services/sendEmail");
 const { sendPushNotification } = require("../services/configPushNotification");
+const { createLog } = require("../controllers/logController");
 
 exports.createProject = async (req, res) => {
   try {
@@ -45,14 +46,14 @@ exports.createProject = async (req, res) => {
           request: req.body,
           response: project,
           log_for: {
-            id: project._id,
+            id: "" + project._id,
             name: project.project_name,
           },
           log_by: user.id,
           organisation_id: user.organisation.organisation,
         };
 
-        await Log.create(log);
+        await createLog(res, log);
 
         let sendTo = [];
         let sendToAdmin = [];
@@ -601,7 +602,7 @@ exports.editProject = async (req, res) => {
           request: req.body,
           response: docs,
           log_for: {
-            id: docs._id,
+            id: "" + docs._id,
             name: docs.project_name,
           },
           log_by: user.id,
@@ -853,7 +854,7 @@ exports.changeProjectStatus = async (req, res) => {
           request: update.project_status,
           response: docs,
           log_for: {
-            id: docs._id,
+            id: "" + docs._id,
             name: docs.project_name,
           },
           log_by: user.id,
@@ -1182,7 +1183,7 @@ exports.assignProject = async (req, res) => {
       request: req.body,
       response: updatedProject.project_assignee,
       log_for: {
-        id: docs._id,
+        id: "" + docs._id,
         name: docs.project_name,
       },
       log_by: user.id,
@@ -1333,7 +1334,7 @@ exports.assignTeamLeader = async (req, res) => {
       request: req.body,
       response: updatedProject.project_leader,
       log_for: {
-        id: docs._id,
+        id: "" + docs._id,
         name: docs.project_name,
       },
       log_by: user.id,
@@ -1426,7 +1427,7 @@ exports.addProjectAttachment = async (req, res) => {
             request: uploadedFile,
             response: { fileUrl: url },
             log_for: {
-              id: docs._id,
+              id: "" + docs._id,
               name: docs.project_name,
             },
             log_by: user.id,
@@ -1505,7 +1506,7 @@ exports.deleteProjectAttachment = async (req, res) => {
             request: req.body,
             response: { message: "Requested attachment deleted" },
             log_for: {
-              id: docs._id,
+              id: "" + docs._id,
               name: docs.project_name,
             },
             log_by: user.id,

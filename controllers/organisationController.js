@@ -64,7 +64,7 @@ exports.createOrganisation = async (req, res) => {
           request: req.body,
           response: userDoc,
           log_for: {
-            id: userDoc._id,
+            id: "" + userDoc._id,
             name: userDoc.name,
           },
           log_by: userDoc._id,
@@ -542,7 +542,7 @@ exports.verifyInvitation = async (req, res) => {
               request: req.body,
               response: userDoc,
               log_for: {
-                id: userDoc._id,
+                id: "" + userDoc._id,
                 name: userDoc.name,
               },
               log_by: userDoc._id,
@@ -601,7 +601,7 @@ exports.verifyInvitation = async (req, res) => {
             request: req.body,
             response: userDoc,
             log_for: {
-              id: userDoc._id,
+              id: "" + userDoc._id,
               name: userDoc.name,
             },
             log_by: userDoc._id,
@@ -769,7 +769,7 @@ exports.createCategory = async (req, res) => {
       request: req.body,
       response: newCategory,
       log_for: {
-        id: newCategory._id,
+        id: "" + newCategory._id,
         name: newCategory.organisation_name,
       },
       log_by: user.id,
@@ -919,7 +919,7 @@ exports.editCategory = async (req, res) => {
       request: req.body,
       response: { categoryName: newName },
       log_for: {
-        id: newCategory._id,
+        id: "" + newCategory._id,
         name: newCategory.organisation_name,
       },
       log_by: user.id,
@@ -940,20 +940,4 @@ exports.editCategory = async (req, res) => {
       message: "Something went wrong" + err,
     });
   }
-};
-
-exports.getLogsByOrg = async (req, res) => {
-  const user = req.user;
-
-  const logs = await Log.find({
-    organisation_id: user.organisation.organisation,
-  });
-  if (!logs) {
-    return res.status(400).send({
-      status: "400",
-      message: "No Logs found",
-    });
-  }
-
-  return res.status(200).send({ status: "200", message: "Logs Details", logs });
 };

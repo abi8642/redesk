@@ -59,7 +59,7 @@ exports.createTask = async (req, res) => {
                   request: payload,
                   response: task,
                   log_for: {
-                    id: task._id,
+                    id: "" + task._id,
                     name: task.task_name,
                     project_id: task.project_id,
                   },
@@ -712,7 +712,7 @@ exports.editTask = async (req, res) => {
           request: req.body,
           response: docs,
           log_for: {
-            id: docs._id,
+            id: "" + docs._id,
             name: docs.task_name,
             project_id: docs.project_id,
           },
@@ -994,7 +994,7 @@ exports.changeTaskStatus = async (req, res) => {
         request: { status: config.task_status[status] },
         response: { status: config.task_status[status] },
         log_for: {
-          id: docs._id,
+          id: "" + docs._id,
           name: docs.task_name,
           project_id: docs.project_id,
         },
@@ -1279,7 +1279,7 @@ exports.addTaskComment = async (req, res) => {
             request: obj,
             response: obj,
             log_for: {
-              id: docs._id,
+              id: "" + docs._id,
               name: docs.task_name,
               project_id: docs.project_id,
             },

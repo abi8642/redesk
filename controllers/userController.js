@@ -8,6 +8,7 @@ const task = require("../models/task");
 const project = require("../models/project");
 const Log = require("../models/log");
 const { sendPushNotification } = require("../services/configPushNotification");
+const { createLog } = require("./logController");
 
 exports.sendOtp = async (req, res) => {
   const { email } = req.body;
@@ -80,6 +81,21 @@ exports.verifyOtp = async (req, res) => {
               otp,
             }
           );
+
+          let log = {
+            date_time: new Date(),
+            log_type: 2,
+            log_heading: "User Login",
+            log_message: `${user.name} Logged In`,
+            log_for: {
+              id: "" + user._id,
+              name: user.name,
+            },
+            log_by: user._id,
+            organisation_id: orgs[0].organisation,
+          };
+
+          await createLog(res, log);
 
           return res.status(200).send({
             status: "200",
@@ -155,7 +171,7 @@ exports.subscribeForPushNotification = async (req, res) => {
         request: req.body,
         response: newUserDetails.notification_subscription,
         log_for: {
-          id: userDetails._id,
+          id: "" + userDetails._id,
           name: userDetails.name,
         },
         log_by: user.id,
@@ -262,20 +278,20 @@ exports.selectOrganization = async (req, res) => {
             // console.log(otp);
             await User.updateMany({ email: user.email }, { otp });
 
-            const logs = {};
-            logs.date_time = new Date();
-            logs.collection_name = "users";
-            logs.document_data = {
-              id: user._id,
-              name: user.name,
+            let log = {
+              date_time: new Date(),
+              log_type: 2,
+              log_heading: "User Login",
+              log_message: `${user.name} Logged In`,
+              log_for: {
+                id: "" + user._id,
+                name: user.name,
+              },
+              log_by: user._id,
+              organisation_id: orgs[0].organisation,
             };
-            logs.message = "User Login";
-            logs.log_by = {
-              id: user._id,
-              name: user.name,
-            };
-            logs.organisation_id = orgs[0].organisation;
-            await Log.create(logs);
+
+            await createLog(res, log);
 
             return res.status(200).send({
               status: "200",
@@ -1106,7 +1122,7 @@ exports.changeUserRoles = async (req, res) => {
           request: { role: newRole },
           response: docs,
           log_for: {
-            id: docs._id,
+            id: "" + docs._id,
             name: docs.name,
           },
           log_by: user.id,
@@ -1247,7 +1263,7 @@ exports.userEdit = async (req, res) => {
           request: req.body,
           response: docs,
           log_for: {
-            id: DecompressionStream._id,
+            id: "" + DecompressionStream._id,
             name: DecompressionStream.name,
           },
           log_by: user.id,
@@ -1320,7 +1336,7 @@ exports.userApproveOrReject = async (req, res) => {
             request: { status: status },
             response: result,
             log_for: {
-              id: result._id,
+              id: "" + result._id,
               name: result.name,
             },
             log_by: user.id,
@@ -1485,7 +1501,7 @@ exports.createObserver = async (req, res) => {
             request: req.body,
             response: userDoc,
             log_for: {
-              id: userDoc._id,
+              id: "" + userDoc._id,
               name: userDoc.name,
             },
             log_by: user.id,
@@ -1560,7 +1576,7 @@ exports.createObserver = async (req, res) => {
           request: req.body,
           response: result,
           log_for: {
-            id: result._id,
+            id: "" + result._id,
             name: result.name,
           },
           log_by: user.id,
@@ -1712,7 +1728,7 @@ exports.createClient = async (req, res) => {
           request: req.body,
           response: userDoc,
           log_for: {
-            id: userDoc._id,
+            id: "" + userDoc._id,
             name: userDoc.name,
           },
           log_by: user.id,
@@ -1786,7 +1802,7 @@ exports.createClient = async (req, res) => {
         request: req.body,
         response: result,
         log_for: {
-          id: result._id,
+          id: "" + result._id,
           name: result.name,
         },
         log_by: user.id,
@@ -1937,7 +1953,7 @@ exports.createSubAdmin = async (req, res) => {
             request: req.body,
             response: userDoc,
             log_for: {
-              id: userDoc._id,
+              id: "" + userDoc._id,
               name: userDoc.name,
             },
             log_by: user.id,
@@ -2012,7 +2028,7 @@ exports.createSubAdmin = async (req, res) => {
           request: req.body,
           response: result,
           log_for: {
-            id: result._id,
+            id: "" + result._id,
             name: result.name,
           },
           log_by: user.id,

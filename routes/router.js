@@ -69,6 +69,7 @@ const {
   projectEfficiency,
   totalProjectEfficiency,
 } = require("../controllers/projectController");
+const { getProjectLog, getLogsByOrg } = require("../controllers/logController");
 const { createRole, getRole } = require("../controllers/roleController");
 const {
   createComment,
@@ -76,7 +77,6 @@ const {
 } = require("../controllers/commentController");
 const { getNotification } = require("../controllers/notificationController");
 const { resetPassword } = require("../services/passwordReset");
-const { createPayroll } = require("../controllers/payrollController");
 const {
   createOrganisation,
   checkSubDomain,
@@ -90,7 +90,6 @@ const {
   editCategory,
   allCategories,
   createOrganisationfromEmail,
-  getLogsByOrg,
 } = require("../controllers/organisationController");
 const {
   allMessages,
@@ -212,7 +211,7 @@ router.post("/createclient", requiredAuth(["admin", "subadmin"]), createClient);
 router.get("/clientList", requiredAuth(), getClient);
 router.put("/editClient/:id", requiredAuth(), param("id").notEmpty(), userEdit);
 
-//task create
+//task apis start
 router.post("/Task", requiredAuth(), createTask);
 router.get("/taskList", requiredAuth(), getTask);
 router.get("/taskListByProject/:id", requiredAuth(), getTaskByProject);
@@ -236,8 +235,9 @@ router.post(
   body("id").notEmpty(),
   addTaskComment
 );
+// task apis end
 
-//project apis
+//project apis start
 router.post(
   "/project",
   requiredAuth(["admin", "subadmin", "team_leader"]),
@@ -278,6 +278,11 @@ router.put(
 router.get("/projectEfficiency/:id", requiredAuth(), projectEfficiency);
 // Calculate total project efficiency api
 router.get("/projectEfficiency", requiredAuth(), totalProjectEfficiency);
+// Project apis end
+
+// Log apis start
+router.get("/projectLog/:id", requiredAuth(), getProjectLog);
+// Log apis end
 
 //create role
 router.post("/role", requiredAuth(), createRole);
@@ -298,9 +303,6 @@ router.post("/changePassword", requiredAuth(), changePassword);
 // api for reset password
 router.post("/resetPassword/:id", resetPassword);
 
-// payroll routes
-router.post("/payroll", requiredAuth(), createPayroll);
-
 //Chat routes
 router.get("/user", requiredAuth(), allUsers);
 router.get("/message/:chatId", requiredAuth(), allMessages);
@@ -313,7 +315,6 @@ router.put("/groupremove", requiredAuth(), removeFromGroup);
 router.put("/groupadd", requiredAuth(), addToGroup);
 
 //fileSystem
-
 // router.get("/upload", requiredAuth(), uploadFile);
 router.post("/createFolder", requiredAuth(), createFolder);
 router.get("/folderList", requiredAuth(), folderList);

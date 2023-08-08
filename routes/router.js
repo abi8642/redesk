@@ -304,15 +304,15 @@ router.post("/changePassword", requiredAuth(), changePassword);
 router.post("/resetPassword/:id", resetPassword);
 
 //Chat routes
-router.get("/user", requiredAuth(), allUsers);
-router.get("/message/:chatId", requiredAuth(), allMessages);
-router.post("/message/", requiredAuth(), sendMessage);
-router.post("/chat/", requiredAuth(), accessChat);
-router.get("/chat/", requiredAuth(), fetchChats);
-router.post("/group", requiredAuth(), createGroupChat);
-router.put("/rename", requiredAuth(), renameGroup);
-router.put("/groupremove", requiredAuth(), removeFromGroup);
-router.put("/groupadd", requiredAuth(), addToGroup);
+router.get("/user", allUsers);
+router.get("/message/:chatId", allMessages);
+router.post("/message/", sendMessage);
+router.post("/chat/", accessChat);
+router.get("/chat/", fetchChats);
+router.post("/group", createGroupChat);
+router.put("/rename", renameGroup);
+router.put("/groupremove", removeFromGroup);
+router.put("/groupadd", addToGroup);
 
 //fileSystem
 // router.get("/upload", requiredAuth(), uploadFile);

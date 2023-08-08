@@ -305,10 +305,10 @@ router.post("/resetPassword/:id", resetPassword);
 
 //Chat routes
 router.get("/user", requiredAuth(), allUsers);
-router.get("/message/:chatId", requiredAuth(), allMessages);
-router.post("/message/", requiredAuth(), sendMessage);
-router.post("/chat/", requiredAuth(), accessChat);
-router.get("/chat/", requiredAuth(), fetchChats);
+router.get("/getChatMessage/:chatId", requiredAuth(), allMessages);
+router.post("/sendMessage/", requiredAuth(), sendMessage);
+router.post("/getChat/", requiredAuth(), accessChat);
+router.get("/chatList/", requiredAuth(), fetchChats);
 router.post("/group", requiredAuth(), createGroupChat);
 router.put("/rename", requiredAuth(), renameGroup);
 router.put("/groupremove", requiredAuth(), removeFromGroup);

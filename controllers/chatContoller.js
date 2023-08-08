@@ -13,25 +13,22 @@ exports.accessChat = async (req, res) => {
   var isChat = await Chat.find({
     isGroupChat: false,
     $and: [
-      { users: { $elemMatch: { $eq: req.user._id } } },
+      { users: { $elemMatch: { $eq: req.user.id } } },
       { users: { $elemMatch: { $eq: userId } } },
     ],
   })
     .populate("users", "-password")
     .populate("latestMessage");
 
-  isChat = await User.populate(isChat, {
-    path: "latestMessage.sender",
-    select: "name pic email",
-  });
+  // console.log("ischat", isChat);
 
   if (isChat.length > 0) {
-    res.send(isChat[0]);
+    return res.send(isChat[0]);
   } else {
     var chatData = {
       chatName: "sender",
       isGroupChat: false,
-      users: [req.user._id, userId],
+      users: [req.user.id, userId],
     };
 
     try {
@@ -40,10 +37,15 @@ exports.accessChat = async (req, res) => {
         "users",
         "-password"
       );
-      res.status(200).json(FullChat);
+      return res.status(200).json({
+        status: 200,
+        msg: FullChat,
+      });
     } catch (error) {
-      res.status(400).json({ message: error });
-      throw new Error(error.message);
+      return res.status(400).json({
+        status: 400,
+        msg: "error" + error,
+      });
     }
   }
 };
@@ -61,6 +63,8 @@ exports.fetchChats = async (req, res) => {
           select: "name pic email",
         });
         res.status(200).send(results);
+        console.log("results", results);
+        // console.log("object", req.user.id);
       });
   } catch (error) {
     res.status(400).json({ message: error });

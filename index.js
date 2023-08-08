@@ -17,16 +17,10 @@ app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 app.use(cookieParser());
 app.use(cors());
-
 app.use(fileUpload());
-
 app.use("/image", express.static(path.join(__dirname, "/files")));
 app.use(express.static("public"));
 
-//make a authentication for the files
-// app.use("/files:id", express.static(path.join(__dirname, "/public/attachments/")));
-
-// app.use("/file/:id", express.static(path.join(__dirname, "/public/attachments/")));
 // Basic Testing Purposes
 app.get("/", (req, res) => {
   return res.json({ message: "Hello World!" });
@@ -74,7 +68,6 @@ io.on("connection", (socket) => {
     projectList.forEach((project) => socket.join("project:" + project._id));
   });
 
-  // socket.emit("message", "hello from server");
   socket.on("join", (data) => {
     socket.join(data.im);
     console.log("user joined room " + data.im);
@@ -85,24 +78,10 @@ io.on("connection", (socket) => {
 
     socket.broadcast.emit("getComment", data);
   });
-  // socket.on("upload", (file, callback) => {
-  //   console.log(file); // <Buffer 25 50 44 ...>
-
-  //   // save the content to the disk, for example
-  //   writeFile("/tmp", file, (err) => {
-  //     callback({ message: err ? "failure" : "success" });
-  //   });
-  // });
 
   // socket to get the all user from the database
   socket.on("userList", (data) => {
-    // console.log("userList called");
-    console.log(data);
-    // io.emit("userList", "aasda");
-  });
-
-  io.on("userList", (data) => {
-    console.log(data);
+    console.log("userList event", data);
   });
 
   // socket to get the all project from the database

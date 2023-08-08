@@ -7,6 +7,7 @@ const Project = require("../models/project");
 const Task = require("../models/task");
 const xlsx = require("xlsx");
 const Log = require("../models/log");
+const { sendPushNotification } = require("../services/configPushNotification");
 
 exports.createOrganisation = async (req, res) => {
   try {
@@ -46,7 +47,7 @@ exports.createOrganisation = async (req, res) => {
           },
         ],
       });
-      user.save((err, user) => {
+      user.save(async (err, userDoc) => {
         if (err) {
           return res.status(400).send({
             status: "500",
@@ -54,6 +55,44 @@ exports.createOrganisation = async (req, res) => {
             err,
           });
         }
+
+        let log = {
+          date_time: new Date(),
+          log_type: 1,
+          log_heading: "New User Joined",
+          log_message: `${name} joined as User in our organization`,
+          request: req.body,
+          response: userDoc,
+          log_for: {
+            id: "" + userDoc._id,
+            name: userDoc.name,
+          },
+          log_by: userDoc._id,
+          organisation_id: orgsExistOrNot._id,
+        };
+
+        await Log.create(log);
+
+        const totalUserList = await User.find({
+          "organisation_list.organisation": orgsExistOrNot._id,
+        });
+        if (totalUserList) {
+          if (totalUserList.length > 0) {
+            for (let singleUser of totalUserList) {
+              if (singleUser && singleUser.notification_subscription) {
+                const message = {
+                  notification: {
+                    title: "New user Joined",
+                    body: `${name} added as User in our organization`,
+                  },
+                  token: singleUser.notification_subscription,
+                };
+                await sendPushNotification(message);
+              }
+            }
+          }
+        }
+
         return res.status(201).send({
           status: "201",
           message: "Successfully added User to  Organisation",
@@ -439,6 +478,9 @@ exports.verifyInvitation = async (req, res) => {
         }
 
         const findUser = await User.findOne({ email: req.body.email });
+        const findOrganisation = await Organisation.findOne({
+          _id: decoded.organisationId,
+        });
 
         if (findUser) {
           let existOrNot = false;
@@ -455,7 +497,7 @@ exports.verifyInvitation = async (req, res) => {
               message: "You are already exist on the organization",
             });
           } else {
-            await User.updateOne(
+            const userDoc = await User.findByIdAndUpdate(
               { _id: findUser._id },
               {
                 $push: {
@@ -466,8 +508,48 @@ exports.verifyInvitation = async (req, res) => {
                     status: "approved",
                   },
                 },
-              }
+              },
+              { new: true }
             );
+
+            const totalUserList = await User.find({
+              "organisation_list.organisation": decoded.organisationId,
+            });
+            if (totalUserList) {
+              if (totalUserList.length > 0) {
+                for (let singleUser of totalUserList) {
+                  if (singleUser && singleUser.notification_subscription) {
+                    const message = {
+                      notification: {
+                        title: "New user Joined",
+                        body: `
+                       ${name} added as User to our organization`,
+                      },
+                      token: singleUser.notification_subscription,
+                    };
+
+                    await sendPushNotification(message);
+                  }
+                }
+              }
+            }
+
+            let log = {
+              date_time: new Date(),
+              log_type: 1,
+              log_heading: "New User Joined",
+              log_message: `${name} joined as User in our organization`,
+              request: req.body,
+              response: userDoc,
+              log_for: {
+                id: "" + userDoc._id,
+                name: userDoc.name,
+              },
+              log_by: userDoc._id,
+              organisation_id: decoded.organisationId,
+            };
+
+            await Log.create(log);
 
             return res.status(201).send({
               status: "201",
@@ -487,7 +569,46 @@ exports.verifyInvitation = async (req, res) => {
               },
             ],
           });
-          user.save();
+          const userDoc = await user.save();
+
+          const totalUserList = await User.find({
+            "organisation_list.organisation": decoded.organisationId,
+          });
+          if (totalUserList) {
+            if (totalUserList.length > 0) {
+              for (let singleUser of totalUserList) {
+                if (singleUser && singleUser.notification_subscription) {
+                  const message = {
+                    notification: {
+                      title: "New user Joined",
+                      body: `
+                     ${name} added as User to our organization`,
+                    },
+                    token: singleUser.notification_subscription,
+                  };
+
+                  await sendPushNotification(message);
+                }
+              }
+            }
+          }
+
+          let log = {
+            date_time: new Date(),
+            log_type: 1,
+            log_heading: "New User Joined",
+            log_message: `${name} joined as User in our organization`,
+            request: req.body,
+            response: userDoc,
+            log_for: {
+              id: "" + userDoc._id,
+              name: userDoc.name,
+            },
+            log_by: userDoc._id,
+            organisation_id: decoded.organisationId,
+          };
+
+          await Log.create(log);
 
           return res.status(201).send({
             status: "201",
@@ -597,6 +718,65 @@ exports.createCategory = async (req, res) => {
       { $addToSet: { projectCategories: name.toUpperCase().trim() } },
       { new: true }
     );
+
+    const totalUserList = await User.find({
+      $and: [
+        {
+          "organisation_list.organisation": user.organisation.organisation,
+        },
+        {
+          $or: [
+            {
+              "organisation_list.role": "admin",
+            },
+            {
+              "organisation_list.role": "subadmin",
+            },
+          ],
+        },
+      ],
+    });
+    if (totalUserList) {
+      if (totalUserList.length > 0) {
+        for (let singleUser of totalUserList) {
+          if (singleUser._id + "" != "" + user.id) {
+            if (singleUser && singleUser.notification_subscription) {
+              const message = {
+                notification: {
+                  title: "New Category Created",
+                  body: `New category ${name.toUpperCase().trim()} created by ${
+                    user.name
+                  }`,
+                },
+                token: singleUser.notification_subscription,
+              };
+
+              await sendPushNotification(message);
+            }
+          }
+        }
+      }
+    }
+
+    let log = {
+      date_time: new Date(),
+      log_type: 1,
+      log_heading: "New Category Added",
+      log_message: `New category ${name.toUpperCase().trim()} created by ${
+        user.name
+      }`,
+      request: req.body,
+      response: newCategory,
+      log_for: {
+        id: "" + newCategory._id,
+        name: newCategory.organisation_name,
+      },
+      log_by: user.id,
+      organisation_id: user.organisation.organisation,
+    };
+
+    await Log.create(log);
+
     return res.status(201).send({
       status: "201",
       message: "Category created successfully",
@@ -686,6 +866,67 @@ exports.editCategory = async (req, res) => {
       { new: true }
     );
 
+    const totalUserList = await User.find({
+      $and: [
+        {
+          "organisation_list.organisation": user.organisation.organisation,
+        },
+        {
+          $or: [
+            {
+              "organisation_list.role": "admin",
+            },
+            {
+              "organisation_list.role": "subadmin",
+            },
+          ],
+        },
+      ],
+    });
+    if (totalUserList) {
+      if (totalUserList.length > 0) {
+        for (let singleUser of totalUserList) {
+          if (singleUser._id + "" != "" + user.id) {
+            if (singleUser && singleUser.notification_subscription) {
+              const message = {
+                notification: {
+                  title: "Category Updated",
+                  body: `Category updated from ${oldName
+                    .toUpperCase()
+                    .trim()} to ${oldName.toUpperCase().trim()} by ${
+                    user.name
+                  }`,
+                },
+                token: singleUser.notification_subscription,
+              };
+
+              await sendPushNotification(message);
+            }
+          }
+        }
+      }
+    }
+
+    let log = {
+      date_time: new Date(),
+      log_type: 2,
+      log_heading: "Category Updated",
+      log_message: `Category updated from ${oldName
+        .toUpperCase()
+        .trim()} to ${oldName.toUpperCase().trim()} by ${user.name}`,
+      before_update: { categoryName: oldName },
+      request: req.body,
+      response: { categoryName: newName },
+      log_for: {
+        id: "" + newCategory._id,
+        name: newCategory.organisation_name,
+      },
+      log_by: user.id,
+      organisation_id: user.organisation.organisation,
+    };
+
+    await Log.create(log);
+
     return res.status(201).send({
       status: "201",
       message: "Category created successfully",
@@ -695,24 +936,7 @@ exports.editCategory = async (req, res) => {
     console.log("err", err);
     return res.status(400).send({
       status: "400",
-      message: "Something went wrong",
-      error: err,
+      message: "Something went wrong" + err,
     });
   }
-};
-
-exports.getLogsByOrg = async (req, res) => {
-  const user = req.user;
-
-  const logs = await Log.find({
-    organisation_id: user.organisation.organisation,
-  });
-  if (!logs) {
-    return res.status(400).send({
-      status: "400",
-      message: "No Logs found",
-    });
-  }
-
-  return res.status(200).send({ status: "200", message: "Logs Details", logs });
 };

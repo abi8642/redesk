@@ -8,6 +8,7 @@ const task = require("../models/task");
 const project = require("../models/project");
 const Log = require("../models/log");
 const { sendPushNotification } = require("../services/configPushNotification");
+const { createLog } = require("./logController");
 
 exports.sendOtp = async (req, res) => {
   const { email } = req.body;
@@ -23,7 +24,11 @@ exports.sendOtp = async (req, res) => {
     }
     const otp = Math.floor(100000 + Math.random() * 900000);
 
-    sendMail(email, "OTP for login", `Your OTP for login is <b>${otp}</b>`);
+    await sendMail(
+      email,
+      "OTP for login",
+      `Your OTP for login is <b>${otp}</b>`
+    );
 
     const updateUser = await User.updateMany({ email }, { otp });
 
@@ -77,20 +82,20 @@ exports.verifyOtp = async (req, res) => {
             }
           );
 
-          const logs = {};
-          logs.date_time = new Date();
-          logs.collection_name = "users";
-          logs.document_data = {
-            id: user._id,
-            name: user.name,
+          let log = {
+            date_time: new Date(),
+            log_type: 2,
+            log_heading: "User Login",
+            log_message: `${user.name} Logged In`,
+            log_for: {
+              id: "" + user._id,
+              name: user.name,
+            },
+            log_by: user._id,
+            organisation_id: orgs[0].organisation,
           };
-          logs.message = "User Login";
-          logs.log_by = {
-            id: user._id,
-            name: user.name,
-          };
-          logs.organisation_id = orgs[0].organisation;
-          await Log.create(logs);
+
+          await createLog(res, log);
 
           return res.status(200).send({
             status: "200",
@@ -121,11 +126,16 @@ exports.verifyOtp = async (req, res) => {
           const otp = Math.floor(100000 + Math.random() * 900000);
           await User.updateMany({ email }, { otp });
 
+          const orgDetails = await User.findOne({ email }).populate(
+            "organisation_list.organisation",
+            "organisation_name _id"
+          );
+
           return res.status(200).send({
             status: "200",
             message: "Otp verified and Token generated",
             token: "Bearer " + token,
-            data: orgs,
+            data: orgDetails,
           });
         }
       );
@@ -145,12 +155,30 @@ exports.subscribeForPushNotification = async (req, res) => {
     let userDetails = await User.findOne({ _id: user.id });
 
     if (userDetails) {
-      userDetails = await User.findOneAndUpdate(
+      let newUserDetails = await User.findOneAndUpdate(
         { _id: user.id },
         {
           notification_subscription: registrationToken,
         }
       );
+
+      let log = {
+        date_time: new Date(),
+        log_type: 2,
+        log_heading: "User Notification Token Added",
+        log_message: `${result.name}'s notification token updated`,
+        before_update: userDetails.notification_subscription,
+        request: req.body,
+        response: newUserDetails.notification_subscription,
+        log_for: {
+          id: "" + userDetails._id,
+          name: userDetails.name,
+        },
+        log_by: user.id,
+        organisation_id: user.organisation.organisation,
+      };
+
+      await Log.create(log);
     } else {
       return res.status(400).send({
         status: 400,
@@ -250,20 +278,20 @@ exports.selectOrganization = async (req, res) => {
             // console.log(otp);
             await User.updateMany({ email: user.email }, { otp });
 
-            const logs = {};
-            logs.date_time = new Date();
-            logs.collection_name = "users";
-            logs.document_data = {
-              id: user._id,
-              name: user.name,
+            let log = {
+              date_time: new Date(),
+              log_type: 2,
+              log_heading: "User Login",
+              log_message: `${user.name} Logged In`,
+              log_for: {
+                id: "" + user._id,
+                name: user.name,
+              },
+              log_by: user._id,
+              organisation_id: orgs[0].organisation,
             };
-            logs.message = "User Login";
-            logs.log_by = {
-              id: user._id,
-              name: user.name,
-            };
-            logs.organisation_id = orgs[0].organisation;
-            await Log.create(logs);
+
+            await createLog(res, log);
 
             return res.status(200).send({
               status: "200",
@@ -808,6 +836,98 @@ exports.userDetails = (req, res) => {
   }
 };
 
+exports.getSingleUserData = async (req, res) => {
+  try {
+    const { userID } = req.params;
+    const user = req.user;
+    const userData = await User.findOne({ _id: userID });
+
+    if (!userData) {
+      return res.status(404).json({
+        status: "404",
+        message: "User not found",
+      });
+    }
+
+    const userProjectTaskList = {
+      _id: userData._id,
+      pic: userData.pic,
+      name: userData.name,
+      email: userData.email,
+      projectDetails: [],
+    };
+    let orgs = [];
+
+    for (let org of userData.organisation_list) {
+      if (req.user.organisation.organisation == org.organisation)
+        orgs.push(org);
+    }
+    userProjectTaskList.role = orgs[0].role;
+    userProjectTaskList.status = orgs[0].status;
+
+    const projectList = await project.find({
+      $or: [
+        { project_assignee: userData._id },
+        { project_leader: userData._id },
+        { created_by: userData._id },
+      ],
+    });
+
+    if (projectList) userProjectTaskList.projectCount = projectList.length;
+
+    if (
+      user.organisation.role === "admin" ||
+      user.organisation.role === "subadmin"
+    ) {
+      if (projectList) {
+        for (const eachProject of projectList) {
+          const taskList = await task.find({
+            $and: [
+              { project_id: eachProject._id },
+              {
+                $or: [
+                  { task_assignee: userData._id },
+                  { created_by: userData._id },
+                ],
+              },
+            ],
+          });
+          const projectWithTasks = {
+            _id: eachProject._id,
+            name: eachProject.name,
+            description: eachProject.description,
+            project_status: eachProject.project_status,
+            category: eachProject.project_category,
+            project_client: eachProject.project_client,
+            project_start_date: eachProject.project_start_date,
+            project_end_date: eachProject.project_end_date,
+            project_no: eachProject.project_no,
+            created_by: eachProject.created_by,
+            project_leader: eachProject.project_leader,
+            project_assignee: eachProject.project_assignee,
+            taskList: taskList,
+          };
+
+          userProjectTaskList.projectDetails.push(projectWithTasks);
+        }
+      }
+    } else {
+      userProjectTaskList.projectDetails = projectList;
+    }
+
+    return res.status(200).json({
+      status: "200",
+      message: "Success",
+      data: userProjectTaskList,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      status: "500",
+      message: "Internal Server Error" + error,
+    });
+  }
+};
+
 exports.allUserFromOrgs = (req, res) => {
   try {
     const user = req.user;
@@ -992,22 +1112,61 @@ exports.changeUserRoles = async (req, res) => {
             .status(400)
             .send({ status: "400", message: "Failed to user Update" });
         }
-        const logs = {};
-        logs.date_time = new Date();
-        logs.collection_name = "users";
-        logs.document_data = {
-          id: getUser._id,
-          name: getUser.name,
+
+        let log = {
+          date_time: new Date(),
+          log_type: 2,
+          log_heading: "User Role Updated",
+          log_message: `User ${getUser.name}'s Role changed from ${oldRole} to ${newRole} by ${user.name}`,
+          before_update: oldRole,
+          request: { role: newRole },
+          response: docs,
+          log_for: {
+            id: "" + docs._id,
+            name: docs.name,
+          },
+          log_by: user.id,
+          organisation_id: user.organisation.organisation,
         };
-        logs.message = "User Role Changed";
-        logs.before_change = oldRole;
-        logs.after_change = newRole;
-        logs.log_by = {
-          id: user.id,
-          name: user.name,
-        };
-        logs.organisation_id = user.organisation.organisation;
-        await Log.create(logs);
+
+        await Log.create(log);
+
+        const totalUserList = await User.find({
+          $and: [
+            {
+              "organisation_list.organisation": user.organisation.organisation,
+            },
+            {
+              $or: [
+                {
+                  "organisation_list.role": "admin",
+                },
+                {
+                  "organisation_list.role": "subadmin",
+                },
+              ],
+            },
+          ],
+        });
+        if (totalUserList) {
+          if (totalUserList.length > 0) {
+            for (let singleUser of totalUserList) {
+              if (singleUser._id + "" != "" + user.id) {
+                if (singleUser && singleUser.notification_subscription) {
+                  const message = {
+                    notification: {
+                      title: "User Role Changed",
+                      body: `User ${getUser.name}'s Role changed from ${oldRole} to ${newRole} by ${user.name}`,
+                    },
+                    token: singleUser.notification_subscription,
+                  };
+
+                  await sendPushNotification(message);
+                }
+              }
+            }
+          }
+        }
 
         return res
           .status(200)
@@ -1094,22 +1253,24 @@ exports.userEdit = async (req, res) => {
             .status(400)
             .send({ status: "400", message: "Failed to user Update" });
         }
-        const logs = {};
-        logs.date_time = new Date();
-        logs.collection_name = "users";
-        logs.document_data = {
-          id: getUser._id,
-          name: getUser.name,
+
+        let log = {
+          date_time: new Date(),
+          log_type: 2,
+          log_heading: "User Profile Updated",
+          log_message: `User ${result.name}'s profile updated`,
+          before_update: getUser,
+          request: req.body,
+          response: docs,
+          log_for: {
+            id: "" + DecompressionStream._id,
+            name: DecompressionStream.name,
+          },
+          log_by: user.id,
+          organisation_id: user.organisation.organisation,
         };
-        logs.message = "User Updated";
-        logs.before_change = getUser;
-        logs.after_change = req.body;
-        logs.log_by = {
-          id: user.id,
-          name: user.name,
-        };
-        logs.organisation_id = user.organisation.organisation;
-        await Log.create(logs);
+
+        await Log.create(log);
 
         return res
           .status(200)
@@ -1127,7 +1288,6 @@ exports.userEdit = async (req, res) => {
   }
 };
 
-// Approve or reject api access by the admin/subadmin only
 exports.userApproveOrReject = async (req, res) => {
   try {
     const user = req.user;
@@ -1167,22 +1327,61 @@ exports.userApproveOrReject = async (req, res) => {
         );
 
         if (result) {
-          const logs = {};
-          logs.date_time = new Date();
-          logs.collection_name = "users";
-          logs.document_data = {
-            id: getUser._id,
-            name: getUser.name,
+          let log = {
+            date_time: new Date(),
+            log_type: 2,
+            log_heading: "User Status Changed",
+            log_message: `User ${result.name}'s status changed from ${oldStatus} to ${status} by ${user.name}`,
+            before_update: oldStatus,
+            request: { status: status },
+            response: result,
+            log_for: {
+              id: "" + result._id,
+              name: result.name,
+            },
+            log_by: user.id,
+            organisation_id: user.organisation.organisation,
           };
-          logs.message = "User Status Changed";
-          logs.before_change = oldStatus;
-          logs.after_change = status;
-          logs.log_by = {
-            id: user.id,
-            name: user.name,
-          };
-          logs.organisation_id = user.organisation.organisation;
-          await Log.create(logs);
+
+          await Log.create(log);
+
+          const totalUserList = await User.find({
+            $and: [
+              {
+                "organisation_list.organisation":
+                  user.organisation.organisation,
+              },
+              {
+                $or: [
+                  {
+                    "organisation_list.role": "admin",
+                  },
+                  {
+                    "organisation_list.role": "subadmin",
+                  },
+                ],
+              },
+            ],
+          });
+          if (totalUserList) {
+            if (totalUserList.length > 0) {
+              for (let singleUser of totalUserList) {
+                if (singleUser._id + "" != "" + user.id) {
+                  if (singleUser && singleUser.notification_subscription) {
+                    const message = {
+                      notification: {
+                        title: "User Status Changed",
+                        body: `User ${getUser.name}'s Status changed from ${oldStatus} to ${status} by ${user.name}`,
+                      },
+                      token: singleUser.notification_subscription,
+                    };
+
+                    await sendPushNotification(message);
+                  }
+                }
+              }
+            }
+          }
 
           if (body === 1) {
             return res
@@ -1280,7 +1479,7 @@ exports.createObserver = async (req, res) => {
             message: "User is already exist on the organization",
           });
         } else {
-          await User.updateOne(
+          const userDoc = await User.updateOne(
             { _id: userExist._id },
             {
               $push: {
@@ -1294,20 +1493,60 @@ exports.createObserver = async (req, res) => {
             }
           );
 
-          const logs = {};
-          logs.date_time = new Date();
-          logs.collection_name = "users";
-          logs.document_data = {
-            id: userExist._id,
-            name: userExist.name,
+          let log = {
+            date_time: new Date(),
+            log_type: 1,
+            log_heading: "Observer Added",
+            log_message: `${userExist.name} added as Observer by ${user.name}`,
+            request: req.body,
+            response: userDoc,
+            log_for: {
+              id: "" + userDoc._id,
+              name: userDoc.name,
+            },
+            log_by: user.id,
+            organisation_id: user.organisation.organisation,
           };
-          logs.message = "Observer Created";
-          logs.log_by = {
-            id: user.id,
-            name: user.name,
-          };
-          logs.organisation_id = user.organisation.organisation;
-          await Log.create(logs);
+
+          await Log.create(log);
+
+          const totalUserList = await User.find({
+            $and: [
+              {
+                "organisation_list.organisation":
+                  user.organisation.organisation,
+              },
+              {
+                $or: [
+                  {
+                    "organisation_list.role": "admin",
+                  },
+                  {
+                    "organisation_list.role": "subadmin",
+                  },
+                ],
+              },
+            ],
+          });
+          if (totalUserList) {
+            if (totalUserList.length > 0) {
+              for (let singleUser of totalUserList) {
+                if (singleUser._id + "" != "" + user.id) {
+                  if (singleUser && singleUser.notification_subscription) {
+                    const message = {
+                      notification: {
+                        title: "New Observer Added",
+                        body: `${userExist.name} added as Observer by ${user.name}`,
+                      },
+                      token: singleUser.notification_subscription,
+                    };
+
+                    await sendPushNotification(message);
+                  }
+                }
+              }
+            }
+          }
 
           return res.status(201).send({
             status: "201",
@@ -1329,20 +1568,59 @@ exports.createObserver = async (req, res) => {
         });
         const result = await newUser.save();
 
-        const logs = {};
-        logs.date_time = new Date();
-        logs.collection_name = "users";
-        logs.document_data = {
-          id: result._id,
-          name: result.name,
+        let log = {
+          date_time: new Date(),
+          log_type: 1,
+          log_heading: "Observer Added",
+          log_message: `${req.body.name} added as Observer by ${user.name}`,
+          request: req.body,
+          response: result,
+          log_for: {
+            id: "" + result._id,
+            name: result.name,
+          },
+          log_by: user.id,
+          organisation_id: user.organisation.organisation,
         };
-        logs.message = "Observer Created";
-        logs.log_by = {
-          id: user.id,
-          name: user.name,
-        };
-        logs.organisation_id = user.organisation.organisation;
-        await Log.create(logs);
+
+        await Log.create(log);
+
+        const totalUserList = await User.find({
+          $and: [
+            {
+              "organisation_list.organisation": user.organisation.organisation,
+            },
+            {
+              $or: [
+                {
+                  "organisation_list.role": "admin",
+                },
+                {
+                  "organisation_list.role": "subadmin",
+                },
+              ],
+            },
+          ],
+        });
+        if (totalUserList) {
+          if (totalUserList.length > 0) {
+            for (let singleUser of totalUserList) {
+              if (singleUser._id + "" != "" + user.id) {
+                if (singleUser && singleUser.notification_subscription) {
+                  const message = {
+                    notification: {
+                      title: "New Observer Added",
+                      body: `${req.body.name} added as Observer by ${user.name}`,
+                    },
+                    token: singleUser.notification_subscription,
+                  };
+
+                  await sendPushNotification(message);
+                }
+              }
+            }
+          }
+        }
 
         res.status(201).send({
           status: "201",
@@ -1428,7 +1706,7 @@ exports.createClient = async (req, res) => {
           message: "User is already exist on the organization",
         });
       } else {
-        await User.updateOne(
+        const userDoc = await User.updateOne(
           { _id: findUser._id },
           {
             $push: {
@@ -1442,20 +1720,59 @@ exports.createClient = async (req, res) => {
           }
         );
 
-        const logs = {};
-        logs.date_time = new Date();
-        logs.collection_name = "users";
-        logs.document_data = {
-          id: findUser._id,
-          name: findUser.name,
+        let log = {
+          date_time: new Date(),
+          log_type: 1,
+          log_heading: "Client Added",
+          log_message: `${findUser.name} added as Client by ${user.name}`,
+          request: req.body,
+          response: userDoc,
+          log_for: {
+            id: "" + userDoc._id,
+            name: userDoc.name,
+          },
+          log_by: user.id,
+          organisation_id: user.organisation.organisation,
         };
-        logs.message = "Client Created";
-        logs.log_by = {
-          id: user.id,
-          name: user.name,
-        };
-        logs.organisation_id = user.organisation.organisation;
-        await Log.create(logs);
+
+        await Log.create(log);
+
+        const totalUserList = await User.find({
+          $and: [
+            {
+              "organisation_list.organisation": user.organisation.organisation,
+            },
+            {
+              $or: [
+                {
+                  "organisation_list.role": "admin",
+                },
+                {
+                  "organisation_list.role": "subadmin",
+                },
+              ],
+            },
+          ],
+        });
+        if (totalUserList) {
+          if (totalUserList.length > 0) {
+            for (let singleUser of totalUserList) {
+              if (singleUser._id + "" != "" + user.id) {
+                if (singleUser && singleUser.notification_subscription) {
+                  const message = {
+                    notification: {
+                      title: "New Client Added",
+                      body: `${findUser.name} added as Client by ${user.name}`,
+                    },
+                    token: singleUser.notification_subscription,
+                  };
+
+                  await sendPushNotification(message);
+                }
+              }
+            }
+          }
+        }
 
         return res.status(201).send({
           status: "201",
@@ -1477,20 +1794,59 @@ exports.createClient = async (req, res) => {
       });
       const result = await newUser.save();
 
-      const logs = {};
-      logs.date_time = new Date();
-      logs.collection_name = "users";
-      logs.document_data = {
-        id: result._id,
-        name: result.name,
+      let log = {
+        date_time: new Date(),
+        log_type: 1,
+        log_heading: "Client Added",
+        log_message: `${req.body.name} added as Client by ${user.name}`,
+        request: req.body,
+        response: result,
+        log_for: {
+          id: "" + result._id,
+          name: result.name,
+        },
+        log_by: user.id,
+        organisation_id: user.organisation.organisation,
       };
-      logs.message = "Client Created";
-      logs.log_by = {
-        id: user.id,
-        name: user.name,
-      };
-      logs.organisation_id = user.organisation.organisation;
-      await Log.create(logs);
+
+      await Log.create(log);
+
+      const totalUserList = await User.find({
+        $and: [
+          {
+            "organisation_list.organisation": user.organisation.organisation,
+          },
+          {
+            $or: [
+              {
+                "organisation_list.role": "admin",
+              },
+              {
+                "organisation_list.role": "subadmin",
+              },
+            ],
+          },
+        ],
+      });
+      if (totalUserList) {
+        if (totalUserList.length > 0) {
+          for (let singleUser of totalUserList) {
+            if (singleUser._id + "" != "" + user.id) {
+              if (singleUser && singleUser.notification_subscription) {
+                const message = {
+                  notification: {
+                    title: "New Client Added",
+                    body: `${req.body.name} added as Client by ${user.name}`,
+                  },
+                  token: singleUser.notification_subscription,
+                };
+
+                await sendPushNotification(message);
+              }
+            }
+          }
+        }
+      }
 
       return res.status(201).send({
         status: "201",
@@ -1575,7 +1931,7 @@ exports.createSubAdmin = async (req, res) => {
             message: "User is already exist on the organization",
           });
         } else {
-          await User.updateOne(
+          const userDoc = await User.updateOne(
             { _id: userExist._id },
             {
               $push: {
@@ -1589,21 +1945,60 @@ exports.createSubAdmin = async (req, res) => {
             }
           );
 
-          const logs = {};
-          logs.date_time = new Date();
-          logs.collection_name = "users";
-          logs.document_data = {
-            id: userExist._id,
-            name: userExist.name,
+          let log = {
+            date_time: new Date(),
+            log_type: 1,
+            log_heading: "Subadmin Added",
+            log_message: `${userExist.name} added as Subadmin by ${user.name}`,
+            request: req.body,
+            response: userDoc,
+            log_for: {
+              id: "" + userDoc._id,
+              name: userDoc.name,
+            },
+            log_by: user.id,
+            organisation_id: user.organisation.organisation,
           };
 
-          logs.message = "Subadmin Created";
-          logs.log_by = {
-            id: user.id,
-            name: user.name,
-          };
-          logs.organisation_id = user.organisation.organisation;
-          await Log.create(logs);
+          await Log.create(log);
+
+          const totalUserList = await User.find({
+            $and: [
+              {
+                "organisation_list.organisation":
+                  user.organisation.organisation,
+              },
+              {
+                $or: [
+                  {
+                    "organisation_list.role": "admin",
+                  },
+                  {
+                    "organisation_list.role": "subadmin",
+                  },
+                ],
+              },
+            ],
+          });
+          if (totalUserList) {
+            if (totalUserList.length > 0) {
+              for (let singleUser of totalUserList) {
+                if (singleUser._id + "" != "" + user.id) {
+                  if (singleUser && singleUser.notification_subscription) {
+                    const message = {
+                      notification: {
+                        title: "New Subadmin Added",
+                        body: `${userExist.name} added as Subadmin by ${user.name}`,
+                      },
+                      token: singleUser.notification_subscription,
+                    };
+
+                    await sendPushNotification(message);
+                  }
+                }
+              }
+            }
+          }
 
           return res.status(201).send({
             status: "201",
@@ -1625,20 +2020,59 @@ exports.createSubAdmin = async (req, res) => {
         });
         const result = await newUser.save();
 
-        const logs = {};
-        logs.date_time = new Date();
-        logs.collection_name = "users";
-        logs.document_data = {
-          id: result._id,
-          name: result.name,
+        let log = {
+          date_time: new Date(),
+          log_type: 1,
+          log_heading: "Subadmin Added",
+          log_message: `${req.body.name} added as Subadmin by ${user.name}`,
+          request: req.body,
+          response: result,
+          log_for: {
+            id: "" + result._id,
+            name: result.name,
+          },
+          log_by: user.id,
+          organisation_id: user.organisation.organisation,
         };
-        logs.message = "Subadmin Created";
-        logs.log_by = {
-          id: user.id,
-          name: user.name,
-        };
-        logs.organisation_id = user.organisation.organisation;
-        await Log.create(logs);
+
+        await Log.create(log);
+
+        const totalUserList = await User.find({
+          $and: [
+            {
+              "organisation_list.organisation": user.organisation.organisation,
+            },
+            {
+              $or: [
+                {
+                  "organisation_list.role": "admin",
+                },
+                {
+                  "organisation_list.role": "subadmin",
+                },
+              ],
+            },
+          ],
+        });
+        if (totalUserList) {
+          if (totalUserList.length > 0) {
+            for (let singleUser of totalUserList) {
+              if (singleUser._id + "" != "" + user.id) {
+                if (singleUser && singleUser.notification_subscription) {
+                  const message = {
+                    notification: {
+                      title: "New Subadmin Added",
+                      body: `${req.body.name} added as Subadmin by ${user.name}`,
+                    },
+                    token: singleUser.notification_subscription,
+                  };
+
+                  await sendPushNotification(message);
+                }
+              }
+            }
+          }
+        }
 
         res.status(201).send({
           status: "201",

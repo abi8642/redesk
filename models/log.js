@@ -6,26 +6,35 @@ const logsSchema = new Schema({
     type: Date,
     required: true,
   },
-  collection_name: {
+  log_type: {
+    type: Number,
+    required: true,
+  },
+  log_heading: {
     type: String,
     required: true,
   },
-  document_data: {
-    type: Object,
-    required: true,
-  },
-  message: {
+  log_message: {
     type: String,
     required: true,
   },
-  before_change: {
+  before_update: {
+    type: Object,
+    default: null,
+  },
+  request: {
     type: Object,
   },
-  after_change: {
+  response: {
     type: Object,
+  },
+  log_for: {
+    type: Object,
+    required: true,
   },
   log_by: {
-    type: Object,
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
     required: true,
   },
   organisation_id: {

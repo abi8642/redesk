@@ -4,12 +4,9 @@ const ProjectModel = require("../models/project");
 const Notification = require("../models/notification");
 const jwt = require("jsonwebtoken");
 const config = require("../config/config");
-const project = require("../models/project");
 const { validationResult } = require("express-validator");
 const User = require("../models/user");
-const notification = require("../models/notification");
 const { sendMail } = require("../services/sendEmail");
-const task = require("../models/task");
 const { sendPushNotification } = require("../services/configPushNotification");
 
 //create task
@@ -54,23 +51,45 @@ exports.createTask = async (req, res) => {
                   _id: task.project_id,
                 });
 
-                const logs = {};
-                logs.date_time = new Date();
-                logs.collection_name = "tasks";
-                logs.document_data = {
-                  id: task._id,
-                  name: task.task_name,
+                let log = {
+                  date_time: new Date(),
+                  log_type: 1,
+                  log_heading: "Task Created",
+                  log_message: `New task "${task.task_name}" of ${projectDetails.project_name} project created by ${user.name}`,
+                  request: payload,
+                  response: task,
+                  log_for: {
+                    id: "" + task._id,
+                    name: task.task_name,
+                    project_id: task.project_id,
+                  },
+                  log_by: user.id,
+                  organisation_id: user.organisation.organisation,
                 };
-                logs.message = "New Task Created";
-                logs.after_change = task;
-                logs.log_by = {
-                  id: user.id,
-                  name: user.name,
-                };
-                logs.organisation_id = user.organisation.organisation;
-                await Log.create(logs);
+
+                await Log.create(log);
 
                 let sendTo = [];
+                let sendToAdmin = [];
+                const totalUserList = await User.find({
+                  $and: [
+                    {
+                      "organisation_list.organisation":
+                        user.organisation.organisation,
+                    },
+                    {
+                      $or: [
+                        {
+                          "organisation_list.role": "admin",
+                        },
+                        {
+                          "organisation_list.role": "subadmin",
+                        },
+                      ],
+                    },
+                  ],
+                });
+
                 if (task.task_assignee) {
                   if (task.task_assignee.length > 0) {
                     for (const eachTaskAssignee of task.task_assignee) {
@@ -92,7 +111,11 @@ exports.createTask = async (req, res) => {
                             notification: {
                               title: "New task assigned",
                               body: `
-                            You are assigned on task "${task.task_name}" of ${projectDetails.project_name} project by ${user.name}`,
+                            You are assigned on task "${task.task_name}" of ${
+                                projectDetails.project_name
+                              } project by ${user.name}\nStatus: ${
+                                config.task_status[task.task_status]
+                              } Priority: ${task.task_priority}`,
                             },
                             token:
                               eachTaskAssigneeData.notification_subscription,
@@ -114,14 +137,143 @@ exports.createTask = async (req, res) => {
                   }
                 }
 
+                if (projectDetails.project_leader) {
+                  if (projectDetails.project_leader.length > 0) {
+                    for (const eachProjectLeader of projectDetails.project_leader) {
+                      const eachProjectLeaderData = await User.findOne({
+                        _id: eachProjectLeader,
+                      });
+
+                      if (eachProjectLeader + "" !== "" + user.id) {
+                        if (
+                          eachProjectLeaderData &&
+                          eachProjectLeaderData.notification_subscription
+                        ) {
+                          sendToAdmin.push(eachProjectLeader);
+                          const message = {
+                            notification: {
+                              title: "New Task Created",
+                              body: `New task "${task.task_name}" of ${
+                                projectDetails.project_name
+                              } project created by ${user.name}\nStatus: ${
+                                config.task_status[task.task_status]
+                              } Priority: ${task.task_priority}`,
+                            },
+                            token:
+                              eachProjectLeaderData.notification_subscription,
+                          };
+
+                          await sendPushNotification(message);
+                        }
+                      }
+
+                      const assigneeMail = eachProjectLeaderData.email;
+                      const subjects = "New Task Created";
+                      const sendMsgs = `
+                        Task_Name: <b>${task.task_name}</b><br>
+                        Task_due_on: <b>${task.task_due_on}</b><br>
+                        Task_priority: <b>${task.task_priority}</b><br>
+                        Task_created_by:<b>${user.name}</b>`;
+                      sendMail(assigneeMail, subjects, sendMsgs);
+                    }
+                  }
+                }
+
+                if (projectDetails.project_client) {
+                  const eachProjectClientData = await User.findOne({
+                    _id: project.project_client,
+                  });
+
+                  if (
+                    eachProjectClientData &&
+                    eachProjectClientData.notification_subscription
+                  ) {
+                    sendToAdmin.push(projectDetails.project_client);
+                    const message = {
+                      notification: {
+                        title: "New Task Created",
+                        body: `New task "${task.task_name}" of ${
+                          projectDetails.project_name
+                        } project created by ${user.name}\nStatus: ${
+                          config.task_status[task.task_status]
+                        } Priority: ${task.task_priority}`,
+                      },
+                      token: eachProjectClientData.notification_subscription,
+                    };
+
+                    await sendPushNotification(message);
+                  }
+
+                  const assigneeMail = eachProjectClientData.email;
+                  const subjects = "New Task Created";
+                  const sendMsgs = `
+                  Task_Name: <b>${task.task_name}</b><br>
+                  Task_due_on: <b>${task.task_due_on}</b><br>
+                  Task_priority: <b>${task.task_priority}</b><br>
+                  Task_created_by:<b>${user.name}</b>`;
+                  sendMail(assigneeMail, subjects, sendMsgs);
+                }
+
+                if (totalUserList) {
+                  for (let singleUser of totalUserList) {
+                    if (singleUser._id + "" != "" + user.id) {
+                      sendToAdmin.push(singleUser._id);
+
+                      if (singleUser.notification_subscription) {
+                        const message = {
+                          notification: {
+                            title: "New Task Created",
+                            body: `
+                            New task "${task.task_name}" of ${
+                              projectDetails.project_name
+                            } project created by ${user.name}\nStatus: ${
+                              config.task_status[task.task_status]
+                            } Priority: ${task.task_priority}`,
+                          },
+                          token: singleUser.notification_subscription,
+                        };
+
+                        await sendPushNotification(message);
+                      }
+
+                      const assigneeMail = singleUser.email;
+                      const subjects = "Task Created";
+                      const sendMsgs = `
+                        Task_Name: <b>${task.task_name}</b><br>
+                        Task_due_on: <b>${task.task_due_on}</b><br>
+                        Task_priority: <b>${task.task_priority}</b><br>
+                        Task_created_by:<b>${user.name}</b>`;
+                      sendMail(assigneeMail, subjects, sendMsgs);
+                    }
+                  }
+                }
+
                 if (sendTo.length > 0) {
                   await Notification.create({
                     title: "New Task assigned",
                     message: `
-                      You are assigned on task "${task.task_name}" of ${projectDetails.project_name} project by ${user.name}`,
+                      You are assigned on task "${task.task_name}" of ${
+                      projectDetails.project_name
+                    } project by ${user.name}\nStatus: ${
+                      config.task_status[task.task_status]
+                    } Priority: ${task.task_priority}`,
                     status: "UNREAD",
                     send_by: user.id,
                     send_to: sendTo,
+                  });
+                }
+                if (sendToAdmin.length > 0) {
+                  await Notification.create({
+                    title: "New Task created",
+                    message: `
+                      New task "${task.task_name}" of ${
+                      projectDetails.project_name
+                    } project created by ${user.name}\nStatus: ${
+                      config.task_status[task.task_status]
+                    } Priority: ${task.task_priority}`,
+                    status: "UNREAD",
+                    send_by: user.id,
+                    send_to: sendToAdmin,
                   });
                 }
 
@@ -546,28 +698,48 @@ exports.editTask = async (req, res) => {
             message: "Failed to Update. Try again later",
           });
         }
-        const logs = {};
-        logs.date_time = new Date();
-        logs.collection_name = "tasks";
-        logs.document_data = {
-          id: docs._id,
-          name: docs.task_name,
-        };
-        logs.message = "Task Updated";
-        logs.before_change = getTask;
-        logs.after_change = req.body;
-        logs.log_by = {
-          id: user.id,
-          name: user.name,
-        };
-        logs.organisation_id = user.organisation.organisation;
-        await Log.create(logs);
 
         const projectDetails = await ProjectModel.findOne({
           _id: docs.project_id,
         });
 
+        let log = {
+          date_time: new Date(),
+          log_type: 2,
+          log_heading: "Task Updated",
+          log_message: `Task "${docs.task_name}" of ${projectDetails.project_name} project is Updated by ${user.name}`,
+          before_update: getTask,
+          request: req.body,
+          response: docs,
+          log_for: {
+            id: "" + docs._id,
+            name: docs.task_name,
+            project_id: docs.project_id,
+          },
+          log_by: user.id,
+          organisation_id: user.organisation.organisation,
+        };
+        await Log.create(log);
+
         let sendTo = [];
+        const totalUserList = await User.find({
+          $and: [
+            {
+              "organisation_list.organisation": user.organisation.organisation,
+            },
+            {
+              $or: [
+                {
+                  "organisation_list.role": "admin",
+                },
+                {
+                  "organisation_list.role": "subadmin",
+                },
+              ],
+            },
+          ],
+        });
+
         if (docs.task_assignee) {
           if (docs.task_assignee.length > 0) {
             for (const eachTaskAssignee of docs.task_assignee) {
@@ -600,9 +772,80 @@ exports.editTask = async (req, res) => {
           }
         }
 
+        if (projectDetails.project_leader) {
+          if (projectDetails.project_leader.length > 0) {
+            for (const eachProjectLeader of projectDetails.project_leader) {
+              const eachProjectLeaderData = await User.findOne({
+                _id: eachProjectLeader,
+              });
+
+              if (eachProjectLeader + "" !== "" + user.id) {
+                if (
+                  eachProjectLeaderData &&
+                  eachProjectLeaderData.notification_subscription
+                ) {
+                  sendTo.push(eachProjectLeader);
+                  const message = {
+                    notification: {
+                      title: "Task Updated",
+                      body: `Task "${docs.task_name}" of ${projectDetails.project_name} project is Updated by ${user.name}`,
+                    },
+                    token: eachProjectLeaderData.notification_subscription,
+                  };
+
+                  await sendPushNotification(message);
+                }
+              }
+            }
+          }
+        }
+
+        if (projectDetails.project_client) {
+          const eachProjectClientData = await User.findOne({
+            _id: project.project_client,
+          });
+
+          if (
+            eachProjectClientData &&
+            eachProjectClientData.notification_subscription
+          ) {
+            sendTo.push(projectDetails.project_client);
+            const message = {
+              notification: {
+                title: "Task Updated",
+                body: `Task "${docs.task_name}" of ${projectDetails.project_name} project is Updated by ${user.name}`,
+              },
+              token: eachProjectClientData.notification_subscription,
+            };
+
+            await sendPushNotification(message);
+          }
+        }
+
+        if (totalUserList) {
+          for (let singleUser of totalUserList) {
+            if (singleUser._id + "" != "" + user.id) {
+              sendTo.push(singleUser._id);
+
+              if (singleUser.notification_subscription) {
+                const message = {
+                  notification: {
+                    title: "Task Updated",
+                    body: `
+                    Task "${docs.task_name}" of ${projectDetails.project_name} project is Updated by ${user.name}. Check it now.`,
+                  },
+                  token: singleUser.notification_subscription,
+                };
+
+                await sendPushNotification(message);
+              }
+            }
+          }
+        }
+
         if (sendTo.length > 0) {
           await Notification.create({
-            title: "New Task assigned",
+            title: "Task Updated",
             message: `
               Task "${docs.task_name}" of ${projectDetails.project_name} project is Updated by ${user.name}. Check it now.`,
             status: "UNREAD",
@@ -733,26 +976,49 @@ exports.changeTaskStatus = async (req, res) => {
     }
 
     if (allOk) {
-      const logs = {};
-      logs.date_time = new Date();
-      logs.collection_name = "tasks";
-      logs.document_data = {
-        id: getTask._id,
-        name: getTask.task_name,
-      };
-      logs.message = "Task Status Changed";
-      logs.before_change = config.task_status[getTask.task_status];
-      logs.after_change = config.task_status[status];
-      logs.log_by = {
-        id: user.id,
-        name: user.name,
-      };
-      logs.organisation_id = user.organisation.organisation;
-      await Log.create(logs);
-
       let sendTo = [];
       const projectDetails = await ProjectModel.findOne({
         _id: docs.project_id,
+      });
+
+      let log = {
+        date_time: new Date(),
+        log_type: 2,
+        log_heading: "Task Status Changed",
+        log_message: `"${docs.task_name}" task of ${
+          projectDetails.project_name
+        } project's status changed from ${
+          config.task_status[getTask.task_status]
+        } to ${config.task_status[status]} by ${user.name}`,
+        before_update: { status: config.task_status[getTask.task_status] },
+        request: { status: config.task_status[status] },
+        response: { status: config.task_status[status] },
+        log_for: {
+          id: "" + docs._id,
+          name: docs.task_name,
+          project_id: docs.project_id,
+        },
+        log_by: user.id,
+        organisation_id: user.organisation.organisation,
+      };
+      await Log.create(log);
+
+      const totalUserList = await User.find({
+        $and: [
+          {
+            "organisation_list.organisation": user.organisation.organisation,
+          },
+          {
+            $or: [
+              {
+                "organisation_list.role": "admin",
+              },
+              {
+                "organisation_list.role": "subadmin",
+              },
+            ],
+          },
+        ],
       });
 
       if (docs.task_assignee) {
@@ -783,6 +1049,89 @@ exports.changeTaskStatus = async (req, res) => {
 
                 await sendPushNotification(message);
               }
+            }
+          }
+        }
+      }
+
+      if (projectDetails.project_leader) {
+        if (projectDetails.project_leader.length > 0) {
+          for (const eachProjectLeader of projectDetails.project_leader) {
+            const eachProjectLeaderData = await User.findOne({
+              _id: eachProjectLeader,
+            });
+
+            if (eachProjectLeader + "" !== "" + user.id) {
+              if (
+                eachProjectLeaderData &&
+                eachProjectLeaderData.notification_subscription
+              ) {
+                sendTo.push(eachProjectLeader);
+                const message = {
+                  notification: {
+                    title: "Task Status Changed",
+                    body: `"${docs.task_name}" task of ${
+                      projectDetails.project_name
+                    } project's status changed from ${
+                      config.task_status[getTask.task_status]
+                    } to ${config.task_status[status]} by ${user.name}`,
+                  },
+                  token: eachProjectLeaderData.notification_subscription,
+                };
+
+                await sendPushNotification(message);
+              }
+            }
+          }
+        }
+      }
+
+      if (projectDetails.project_client) {
+        const eachProjectClientData = await User.findOne({
+          _id: project.project_client,
+        });
+
+        if (
+          eachProjectClientData &&
+          eachProjectClientData.notification_subscription
+        ) {
+          sendTo.push(projectDetails.project_client);
+          const message = {
+            notification: {
+              title: "Task Status Changed",
+              body: `"${docs.task_name}" task of ${
+                projectDetails.project_name
+              } project's status changed from ${
+                config.task_status[getTask.task_status]
+              } to ${config.task_status[status]} by ${user.name}`,
+            },
+            token: eachProjectClientData.notification_subscription,
+          };
+
+          await sendPushNotification(message);
+        }
+      }
+
+      if (totalUserList) {
+        for (let singleUser of totalUserList) {
+          if (singleUser._id + "" != "" + user.id) {
+            sendTo.push(singleUser._id);
+
+            if (singleUser.notification_subscription) {
+              const message = {
+                notification: {
+                  title: "Task Status Changed",
+                  body: `
+                  "${docs.task_name}" task of ${
+                    projectDetails.project_name
+                  } project's status changed from ${
+                    config.task_status[getTask.task_status]
+                  } to ${config.task_status[status]} by ${user.name}`,
+                },
+                token: singleUser.notification_subscription,
+              };
+
+              await sendPushNotification(message);
             }
           }
         }
@@ -832,15 +1181,40 @@ exports.reminderTask = async (req, res) => {
       });
     }
 
-    result.task_assignee.forEach((element) => {
-      if (user.id != element) {
-        Notification.create({
-          notification: "Please complete the task immediately",
-          status: "UNREAD",
-          send_by: user._id,
-          send_to: element,
-        });
+    if (result.task_assignee) {
+      if (result.task_assignee.length > 0) {
+        for (let assignee of result.task_assignee) {
+          const eachTaskAssigneeData = await User.findOne({
+            _id: assignee,
+          });
+          if (assignee + "" !== "" + user.id) {
+            if (
+              eachTaskAssigneeData &&
+              eachTaskAssigneeData.notification_subscription
+            ) {
+              const message = {
+                notification: {
+                  title: "Task Reminder",
+                  body: `
+                  Reminder to complete the task "${result.task_name}" as soon as possible.\nSend by:  ${user.name}`,
+                },
+                token: eachTaskAssigneeData.notification_subscription,
+              };
+
+              // await sendPushNotification(message);
+            }
+          }
+        }
       }
+    }
+
+    await Notification.create({
+      title: "Task Reminder",
+      message: `
+        Reminder to complete the task "${result.task_name}" as soon as possible.\nSend by:  ${user.name}`,
+      status: "UNREAD",
+      send_by: user.id,
+      send_to: result.task_assignee,
     });
 
     return res.status(200).send({
@@ -850,7 +1224,7 @@ exports.reminderTask = async (req, res) => {
   } catch (err) {
     return res.status(500).send({
       status: 500,
-      message: "Try again later",
+      message: "Try again later" + err,
     });
   }
 };
@@ -872,17 +1246,19 @@ exports.addTaskComment = async (req, res) => {
     if (comment) obj.comment = comment;
 
     obj.user = user.id;
-    if (req.files !== null && req.files.file) {
-      obj.type = "attachment";
-      obj.contentType = req.files.file.mimetype;
+    if (req.file) {
+      if (req.files !== null && req.files.file) {
+        obj.type = "attachment";
+        obj.contentType = req.files.file.mimetype;
 
-      await req.files.file.mv(
-        `${__dirname}/../public/images/${req.files.file.name}`,
-        (err) => {
-          if (err) console.log(err);
-        }
-      );
-      obj.file = `/images/${req.files.file.name}`;
+        await req.files.file.mv(
+          `${__dirname}/../public/images/${req.files.file.name}`,
+          (err) => {
+            if (err) console.log(err);
+          }
+        );
+        obj.file = `/images/${req.files.file.name}`;
+      }
     }
     TaskModel.findByIdAndUpdate(
       { _id: id },
@@ -890,25 +1266,45 @@ exports.addTaskComment = async (req, res) => {
       { new: true },
       async (err, docs) => {
         if (!err) {
-          const logs = {};
-          logs.date_time = new Date();
-          logs.collection_name = "tasks";
-          logs.document_data = {
-            id: docs._id,
-            name: docs.task_name,
-          };
-          logs.message = "Comment Added on Task";
-          logs.after_change = obj;
-          logs.log_by = {
-            id: user.id,
-            name: user.name,
-          };
-          logs.organisation_id = user.organisation.organisation;
-          await Log.create(logs);
-
           let sendTo = [];
           const projectDetails = await ProjectModel.findOne({
             _id: docs.project_id,
+          });
+
+          let log = {
+            date_time: new Date(),
+            log_type: 1,
+            log_heading: "Comment Added",
+            log_message: `Comment added on "${docs.task_name}" task of ${projectDetails.project_name} project by ${user.name}`,
+            request: obj,
+            response: obj,
+            log_for: {
+              id: "" + docs._id,
+              name: docs.task_name,
+              project_id: docs.project_id,
+            },
+            log_by: user.id,
+            organisation_id: user.organisation.organisation,
+          };
+          await Log.create(log);
+
+          const totalUserList = await User.find({
+            $and: [
+              {
+                "organisation_list.organisation":
+                  user.organisation.organisation,
+              },
+              {
+                $or: [
+                  {
+                    "organisation_list.role": "admin",
+                  },
+                  {
+                    "organisation_list.role": "subadmin",
+                  },
+                ],
+              },
+            ],
           });
 
           if (docs.task_assignee) {
@@ -937,6 +1333,77 @@ exports.addTaskComment = async (req, res) => {
               }
             }
           }
+
+          if (projectDetails.project_leader) {
+            if (projectDetails.project_leader.length > 0) {
+              for (const eachProjectLeader of projectDetails.project_leader) {
+                const eachProjectLeaderData = await User.findOne({
+                  _id: eachProjectLeader,
+                });
+
+                if (eachProjectLeader + "" !== "" + user.id) {
+                  if (
+                    eachProjectLeaderData &&
+                    eachProjectLeaderData.notification_subscription
+                  ) {
+                    sendTo.push(eachProjectLeader);
+                    const message = {
+                      notification: {
+                        title: "Task Status Changed",
+                        body: `Comment added on "${docs.task_name}" task of ${projectDetails.project_name} project by ${user.name}`,
+                      },
+                      token: eachProjectLeaderData.notification_subscription,
+                    };
+
+                    await sendPushNotification(message);
+                  }
+                }
+              }
+            }
+          }
+
+          if (projectDetails.project_client) {
+            const eachProjectClientData = await User.findOne({
+              _id: project.project_client,
+            });
+
+            if (
+              eachProjectClientData &&
+              eachProjectClientData.notification_subscription
+            ) {
+              sendTo.push(projectDetails.project_client);
+              const message = {
+                notification: {
+                  title: "Task Comment Added",
+                  body: `Comment added on "${docs.task_name}" task of ${projectDetails.project_name} project by ${user.name}`,
+                },
+                token: eachProjectClientData.notification_subscription,
+              };
+
+              await sendPushNotification(message);
+            }
+          }
+
+          if (totalUserList) {
+            for (let singleUser of totalUserList) {
+              if (singleUser._id + "" != "" + user.id) {
+                sendTo.push(singleUser._id);
+
+                if (singleUser.notification_subscription) {
+                  const message = {
+                    notification: {
+                      title: "Task Comment Added",
+                      body: `Comment added on "${docs.task_name}" task of ${projectDetails.project_name} project by ${user.name}`,
+                    },
+                    token: singleUser.notification_subscription,
+                  };
+
+                  await sendPushNotification(message);
+                }
+              }
+            }
+          }
+
           if (sendTo.length > 0) {
             await Notification.create({
               title: "Task Comment Added",

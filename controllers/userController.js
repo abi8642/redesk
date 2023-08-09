@@ -162,55 +162,30 @@ exports.subscribeForPushNotification = async (req, res) => {
         }
       );
 
-      let log = {
-        date_time: new Date(),
-        log_type: 2,
-        log_heading: "User Notification Token Added",
-        log_message: `${newUserDetails.name}'s notification token updated`,
-        before_update: userDetails.notification_subscription,
-        request: req.body,
-        response: newUserDetails.notification_subscription,
-        log_for: {
-          id: "" + newUserDetails._id,
-          name: newUserDetails.name,
-        },
-        log_by: user.id,
-        organisation_id: user.organisation.organisation,
-      };
+      // let log = {
+      //   date_time: new Date(),
+      //   log_type: 2,
+      //   log_heading: "User Notification Token Added",
+      //   log_message: `${newUserDetails.name}'s notification token updated`,
+      //   before_update: userDetails.notification_subscription,
+      //   request: req.body,
+      //   response: newUserDetails.notification_subscription,
+      //   log_for: {
+      //     id: "" + newUserDetails._id,
+      //     name: newUserDetails.name,
+      //   },
+      //   log_by: user.id,
+      //   organisation_id: user.organisation.organisation,
+      // };
 
-      await Log.create(log);
+      // await Log.create(log);
     } else {
       return res.status(400).send({
         status: 400,
         message: "User Not Found",
       });
     }
-
-    const message = {
-      notification: {
-        title: "Login Successful",
-        body: `Welcome ${user.name}`,
-      },
-      token: registrationToken,
-    };
-
-    let firebaseResp = await sendPushNotification(message);
-
-    if (firebaseResp.status === 1) {
-      return res.status(200).send({
-        status: 200,
-        message: "Send Notification Successfully",
-        response: firebaseResp.response,
-      });
-    } else {
-      return res.status(400).send({
-        status: 400,
-        message: "Error sending notification",
-        error: firebaseResp.err,
-      });
-    }
   } catch (error) {
-    console.error("Error sending notification:", error);
     return res.status(400).send({
       status: 400,
       message: "Error sending notification",
@@ -1417,13 +1392,19 @@ exports.userApproveOrReject = async (req, res) => {
 exports.allUsers = async (req, res) => {
   try {
     const user = req.user;
+    if (req.query.search === "") {
+      res.status(400).send({
+        status: "400",
+        message: "Enter name or email to find some one",
+      });
+    }
     const keyword = req.query.search
       ? {
           $and: [
             {
               $or: [
                 { name: { $regex: req.query.search, $options: "i" } },
-                { email: { $regex: req.query.search, $options: "i" } },
+                // { email: { $regex: req.query.search, $options: "i" } },
               ],
             },
             {

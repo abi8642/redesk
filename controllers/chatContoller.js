@@ -4,37 +4,36 @@ const User = require("../models/user");
 
 exports.createSingleChat = async (req, res) => {
   try {
-    if (req.body.userID && typeof req.body.userID === "String") {
-      var chatData = {
-        chatName: "sender",
-        isGroupChat: false,
-        users: [req.user.id, req.body.userID],
-      };
-
-      const createdChat = await Chat.create(chatData);
-      const chatDetails = await Chat.findOne({ _id: createdChat._id }).populate(
-        "users",
-        "-password"
-      );
-
-      if (chatDetails) {
-        return res.status(200).json({
-          status: 200,
-          message: "Chat Fetched",
-          chat: chatDetails,
-        });
-      } else {
-        return res.status(400).json({
-          status: 400,
-          message: "Chat Not Found",
-        });
-      }
+    if (!req.body.userID) {
+      return res.status(400).json({
+        status: 400,
+        msg: "UserID is required",
+      });
     }
+    var chatData = {
+      chatName: "sender",
+      isGroupChat: false,
+      users: [req.user.id, req.body.userID],
+    };
 
-    return res.status(400).json({
-      status: 400,
-      msg: "UserID is required",
-    });
+    const createdChat = await Chat.create(chatData);
+    const chatDetails = await Chat.findOne({ _id: createdChat._id }).populate(
+      "users",
+      "-password"
+    );
+
+    if (chatDetails) {
+      return res.status(200).json({
+        status: 200,
+        message: "Chat Fetched",
+        chat: chatDetails,
+      });
+    } else {
+      return res.status(400).json({
+        status: 400,
+        message: "Chat Not Found",
+      });
+    }
   } catch (error) {
     return res.status(500).json({
       status: 500,
@@ -45,31 +44,30 @@ exports.createSingleChat = async (req, res) => {
 
 exports.accessChat = async (req, res) => {
   try {
-    if (req.body.chatID && typeof req.body.chatID === "String") {
-      const chatDetails = await Chat.findOne({
-        _id: req.body.chatID,
-      })
-        .populate("users", "-password")
-        .populate("latestMessage");
-
-      if (chatDetails) {
-        return res.status(200).json({
-          status: 200,
-          message: "Chat Fetched",
-          chat: chatDetails,
-        });
-      } else {
-        return res.status(400).json({
-          status: 400,
-          message: "Chat Not Found",
-        });
-      }
+    if (!req.body.chatID) {
+      return res.status(400).json({
+        status: 400,
+        msg: "ChatID is required",
+      });
     }
+    const chatDetails = await Chat.findOne({
+      _id: req.body.chatID,
+    })
+      .populate("users", "-password")
+      .populate("latestMessage");
 
-    return res.status(400).json({
-      status: 400,
-      msg: "ChatID is required",
-    });
+    if (chatDetails) {
+      return res.status(200).json({
+        status: 200,
+        message: "Chat Fetched",
+        chat: chatDetails,
+      });
+    } else {
+      return res.status(400).json({
+        status: 400,
+        message: "Chat Not Found",
+      });
+    }
   } catch (error) {
     return res.status(500).json({
       status: 500,

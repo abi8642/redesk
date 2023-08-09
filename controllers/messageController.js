@@ -4,6 +4,12 @@ const User = require("../models/user");
 
 exports.allMessages = async (req, res) => {
   try {
+    if (!req.params.chatId) {
+      res.status(400).json({
+        status: 400,
+        message: "Chat ID is required",
+      });
+    }
     const messages = await Message.find({ chat: req.params.chatId })
       .populate("sender", "name pic email")
       .populate("chat");

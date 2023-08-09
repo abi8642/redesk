@@ -1368,13 +1368,13 @@ exports.userApproveOrReject = async (req, res) => {
               .send({ status: "200", message: "User Status rejected" });
           }
         } else {
-          res.status(400).send({
+          return res.status(400).send({
             status: 400,
             message: "Failed to change status",
           });
         }
       } else {
-        res.status(400).send({
+        return res.status(400).send({
           status: 400,
           message: "Invalid Status",
         });
@@ -1382,7 +1382,7 @@ exports.userApproveOrReject = async (req, res) => {
     } else {
     }
   } catch (err) {
-    res.status(500).send({
+    return res.status(500).send({
       status: 500,
       message: "Failed to change status" + err,
     });
@@ -1393,7 +1393,7 @@ exports.allUsers = async (req, res) => {
   try {
     const user = req.user;
     if (req.query.search === "") {
-      res.status(400).send({
+      return res.status(400).send({
         status: "400",
         message: "Enter name or email to find some one",
       });
@@ -1424,7 +1424,7 @@ exports.allUsers = async (req, res) => {
       .status(200)
       .send({ code: 200, message: "User List fetched", users });
   } catch (err) {
-    res.status(500).send({
+    return res.status(500).send({
       status: "500",
       message: "Failed to User List",
     });

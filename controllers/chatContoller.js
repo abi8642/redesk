@@ -2,56 +2,79 @@ const Chat = require("../models/chatModel");
 const Message = require("../models/messageModel");
 const User = require("../models/user");
 
-exports.accessChat = async (req, res) => {
-  const { userId } = req.body;
+exports.createSingleChat = async (req, res) => {
+  try {
+    if (req.body.userID && typeof req.body.userID === "String") {
+      var chatData = {
+        chatName: "sender",
+        isGroupChat: false,
+        users: [req.user.id, req.body.userID],
+      };
 
-  if (!userId) {
-    return res.status(400).json({
-      status: 400,
-      message: "User ID required",
-    });
-  }
-
-  var isChat = await Chat.find({
-    isGroupChat: false,
-    $and: [
-      { users: { $elemMatch: { $eq: req.user.id } } },
-      { users: { $elemMatch: { $eq: userId } } },
-    ],
-  })
-    .populate("users", "-password")
-    .populate("latestMessage");
-
-  if (isChat.length > 0) {
-    return res.status(200).json({
-      status: 200,
-      message: "Chat Fetched",
-      chat: isChat[0],
-    });
-  } else {
-    var chatData = {
-      chatName: "sender",
-      isGroupChat: false,
-      users: [req.user.id, userId],
-    };
-
-    try {
       const createdChat = await Chat.create(chatData);
-      const FullChat = await Chat.findOne({ _id: createdChat._id }).populate(
+      const chatDetails = await Chat.findOne({ _id: createdChat._id }).populate(
         "users",
         "-password"
       );
-      return res.status(200).json({
-        status: 200,
-        message: "Chat Fetched",
-        chat: FullChat,
-      });
-    } catch (error) {
-      return res.status(500).json({
-        status: 500,
-        msg: "Failed to fetch chat data" + error,
-      });
+
+      if (chatDetails) {
+        return res.status(200).json({
+          status: 200,
+          message: "Chat Fetched",
+          chat: chatDetails,
+        });
+      } else {
+        return res.status(400).json({
+          status: 400,
+          message: "Chat Not Found",
+        });
+      }
     }
+
+    return res.status(400).json({
+      status: 400,
+      msg: "UserID is required",
+    });
+  } catch (error) {
+    return res.status(500).json({
+      status: 500,
+      msg: "Failed to create chat" + error,
+    });
+  }
+};
+
+exports.accessChat = async (req, res) => {
+  try {
+    if (req.body.chatID && typeof req.body.chatID === "String") {
+      const chatDetails = await Chat.findOne({
+        _id: req.body.chatID,
+      })
+        .populate("users", "-password")
+        .populate("latestMessage");
+
+      if (chatDetails) {
+        return res.status(200).json({
+          status: 200,
+          message: "Chat Fetched",
+          chat: chatDetails,
+        });
+      } else {
+        return res.status(400).json({
+          status: 400,
+          message: "Chat Not Found",
+        });
+      }
+    }
+
+    return res.status(400).json({
+      status: 400,
+      msg: "ChatID is required",
+    });
+  } catch (error) {
+    return res.status(500).json({
+      status: 500,
+      msg: "Failed to fetch chat data" + error,
+    });
   }
 };
 

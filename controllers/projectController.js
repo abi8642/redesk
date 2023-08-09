@@ -696,7 +696,7 @@ exports.editProject = async (req, res) => {
                 Project_due_on: <b>${docs.project_end_date}</b><br>
                 Project_priority: <b>${docs.project_priority}</b><br>
                 Project_created_by: <b>${user.name}</b><br>
-                Role:<b>${user.organisation.role}</b>
+                Role:<b>Leader</b>
                 `;
               sendMail(assigneeMail, subjects, sendMsgs);
             }
@@ -731,7 +731,7 @@ exports.editProject = async (req, res) => {
             Project_due_on: <b>${docs.project_end_date}</b><br>
             Project_priority: <b>${docs.project_priority}</b><br>
             Project_created_by: <b>${user.name}</b><br>
-            Role:<b>${user.organisation.role}</b>`;
+            Role:<b>Client</b>`;
           sendMail(assigneeMail, subjects, sendMsgs);
         }
 

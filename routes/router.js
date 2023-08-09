@@ -96,6 +96,7 @@ const {
   sendMessage,
 } = require("../controllers/messageController");
 const {
+  createSingleChat,
   accessChat,
   fetchChats,
   createGroupChat,
@@ -308,6 +309,7 @@ router.get("/user", requiredAuth(), allUsers);
 router.get("/getChatMessage/:chatId", requiredAuth(), allMessages);
 router.post("/sendMessage/", requiredAuth(), sendMessage);
 router.post("/getChat/", requiredAuth(), accessChat);
+router.post("/createChat/", requiredAuth(), createSingleChat);
 router.get("/chatList/", requiredAuth(), fetchChats);
 router.post("/group", requiredAuth(), createGroupChat);
 router.put("/rename", requiredAuth(), renameGroup);

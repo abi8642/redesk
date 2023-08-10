@@ -2116,6 +2116,65 @@ exports.getSubadmin = async (req, res) => {
   }
 };
 
+exports.changeLoginStatus = async (req, res) => {
+  try {
+    const user = req.user;
+    const { isOnline } = req.body;
+
+    if (isOnline + "") {
+      if (typeof isOnline !== "number") {
+        return res.status(400).send({
+          status: 400,
+          message: "Login Status must be a valid integer",
+        });
+      }
+      if (isOnline < 0 && isOnline > 1) {
+        return res.status(400).send({
+          status: 400,
+          message: "Login Status either be 0 or 1",
+        });
+      }
+
+      const updateUserLoginStatus = await User.findByIdAndUpdate(
+        {
+          _id: user.id,
+        },
+        {
+          $set: { "organisation_list.$[element].isOnline": isOnline },
+        },
+        {
+          arrayFilters: [
+            { "element.organisation": user.organisation.organisation },
+          ],
+          new: true,
+        }
+      );
+
+      if (updateUserLoginStatus) {
+        return res.status(200).send({
+          status: 200,
+          message: `User is ${config.loginStatus[isOnline]}`,
+        });
+      } else {
+        return res.status(400).send({
+          status: 400,
+          message: "Failed to update login status",
+        });
+      }
+    } else {
+      return res.status(400).send({
+        status: 400,
+        message: "Login Status required",
+      });
+    }
+  } catch (err) {
+    return res.status(500).send({
+      status: 500,
+      message: "Failed to change login status" + err,
+    });
+  }
+};
+
 // Unused apis for now
 // ****************************************************************
 exports.requestToken = async (req, res) => {

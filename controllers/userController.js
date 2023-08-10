@@ -1393,7 +1393,7 @@ exports.allUsers = async (req, res) => {
   try {
     const user = req.user;
     if (req.query.search === "") {
-      res.status(400).send({
+      return res.status(400).send({
         status: "400",
         message: "Enter name or email to find some one",
       });

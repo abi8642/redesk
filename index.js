@@ -108,11 +108,14 @@ io.on("connection", (socket) => {
     socket.join(room);
     console.log("User Joined Room: " + room);
   });
+
   socket.on("typing", (room) => {
     // console.log("typing");
     socket.in(room).emit("typing");
   });
+
   socket.on("stop typing", (room) => socket.in(room).emit("stop typing"));
+
   socket.on("upload", (data, callback) => {
     // console.log(data); // <Buffer 25 50 44 ...>
     //broadcast the file to all the users in the room
@@ -131,9 +134,11 @@ io.on("connection", (socket) => {
       callback({ message: err ? "failure" : "success" });
     });
   });
+
   socket.on("send message", () => {
     socket.emit("message", "Hi Subha");
   });
+
   socket.on("new message", (newMessageRecieved) => {
     console.log("mesaage", newMessageRecieved);
 

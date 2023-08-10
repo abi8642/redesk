@@ -31,6 +31,25 @@ exports.sendMessage = async (req, res) => {
   try {
     let { content, chatId, contentType } = req.body;
 
+    let blankFields = [];
+
+    if (!contentType) {
+      blankFields.push(" contentType ");
+    }
+    if (!content) {
+      blankFields.push(" content ");
+    }
+    if (!chatId) {
+      blankFields.push(" chatId ");
+    }
+
+    if (blankFields.length > 0) {
+      return res.status(400).send({
+        status: 400,
+        message: `${blankFields} cannot be blank`,
+      });
+    }
+
     var newMessage = {
       sender: req.user.id,
       content: content,

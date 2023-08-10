@@ -37,6 +37,7 @@ const {
   sendOtp,
   requestToken,
   subscribeForPushNotification,
+  changeLoginStatus,
 } = require("../controllers/userController");
 const {
   createTask,
@@ -211,6 +212,7 @@ router.put(
 router.post("/createclient", requiredAuth(["admin", "subadmin"]), createClient);
 router.get("/clientList", requiredAuth(), getClient);
 router.put("/editClient/:id", requiredAuth(), param("id").notEmpty(), userEdit);
+router.post("/changeLoginStatus", requiredAuth(), changeLoginStatus);
 
 //task apis start
 router.post("/Task", requiredAuth(), createTask);

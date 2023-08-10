@@ -52,6 +52,10 @@ const userSchema = new mongoose.Schema(
           type: String,
           default: "approved",
         },
+        isOnline: {
+          type: Number,
+          default: 0,
+        },
       },
     ],
     phone: {

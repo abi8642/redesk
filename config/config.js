@@ -30,6 +30,10 @@ let config = {
     1: "insert",
     2: "update",
   },
+  loginStatus: {
+    0: "OFFLINE",
+    1: "ONLINE",
+  },
 };
 
 module.exports = config;

@@ -84,22 +84,54 @@ exports.accessChat = async (req, res) => {
 
 exports.fetchChats = async (req, res) => {
   try {
-    Chat.find({ users: { $elemMatch: { $eq: req.user.id } } })
-      .populate("users", "-password")
-      .populate("groupAdmin", "-password")
+    let chatList = await Chat.find({
+      users: { $elemMatch: { $eq: req.user.id } },
+    })
+      .populate("users", "name email pic")
+      .populate("groupAdmin", "name email pic")
       .populate("latestMessage")
-      .sort({ updatedAt: -1 })
-      .then(async (results) => {
-        results = await User.populate(results, {
-          path: "latestMessage.sender",
-          select: "name pic email",
-        });
-        return res.status(200).json({
-          status: 200,
-          message: "Chat List Fetched",
-          results,
-        });
+      .populate("latestMessage.sender", "name pic email")
+      .sort({ updatedAt: -1 });
+
+    chatList = await User.populate(chatList, {
+      path: "latestMessage.sender",
+      select: "name pic email",
+    });
+
+    let chatListArray = [];
+
+    let obj = {};
+    for (let chat of chatList) {
+      let unreadMessageCount = await Message.countDocuments({
+        chat: chat._id,
+        $and: [{ sender: { $ne: req.user.id }, readBy: { $nin: req.user.id } }],
       });
+
+      chat.unreadMessageCount = unreadMessageCount;
+      console.log("chat", chat);
+
+      obj.chat = chat;
+      obj.unreadMessageCount = unreadMessageCount;
+
+      chatListArray.push(obj);
+    }
+
+    // Chat.find({ users: { $elemMatch: { $eq: req.user.id } } })
+    //   .populate("users", "-password")
+    //   .populate("groupAdmin", "-password")
+    //   .populate("latestMessage")
+    //   .sort({ updatedAt: -1 })
+    //   .then(async (results) => {
+    //     results = await User.populate(results, {
+    //       path: "latestMessage.sender",
+    //       select: "name pic email",
+    //     });
+    // });
+    return res.status(200).json({
+      status: 200,
+      message: "Chat List Fetched",
+      chatListArray,
+    });
   } catch (error) {
     return res.status(500).json({
       status: 500,

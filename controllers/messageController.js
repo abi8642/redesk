@@ -10,6 +10,12 @@ exports.allMessages = async (req, res) => {
         message: "Chat ID is required",
       });
     }
+
+    await Message.updateMany(
+      { chat: req.params.chatId, sender: { $ne: req.user.id } },
+      { $addToSet: { readBy: req.user.id } }
+    );
+
     const messages = await Message.find({ chat: req.params.chatId })
       .populate("sender", "name pic email")
       .populate("chat");
@@ -65,7 +71,12 @@ exports.sendMessage = async (req, res) => {
         await req.files.file.mv(
           `${__dirname}/../public/images/${req.files.file.name}`,
           (err) => {
-            if (err) console.log(err);
+            if (err) {
+              return res.status(400).send({
+                status: 400,
+                message: "Failed Send File" + err,
+              });
+            }
           }
         );
       }
@@ -73,14 +84,13 @@ exports.sendMessage = async (req, res) => {
 
     var message = await Message.create(newMessage);
 
+    await Chat.findByIdAndUpdate(chatId, { latestMessage: message._id });
     message = await message.populate("sender", "name pic email").execPopulate();
     message = await message.populate("chat").execPopulate();
     message = await User.populate(message, {
       path: "chat.users",
       select: "name pic email",
     });
-
-    await Chat.findByIdAndUpdate(chatId, { latestMessage: message });
 
     return res.status(200).json({
       status: 200,

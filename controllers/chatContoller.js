@@ -19,7 +19,7 @@ exports.createSingleChat = async (req, res) => {
     const createdChat = await Chat.create(chatData);
     const chatDetails = await Chat.findOne({ _id: createdChat._id }).populate(
       "users",
-      "-password"
+      "_id name email pic"
     );
 
     if (chatDetails) {
@@ -53,14 +53,20 @@ exports.accessChat = async (req, res) => {
     const chatDetails = await Chat.findOne({
       _id: req.body.chatID,
     })
-      .populate("users", "-password")
+      .populate("users", "_id name email pic")
       .populate("latestMessage");
+
+    const unreadMessageCount = await Message.countDocuments({
+      chat: chatDetails._id,
+      $and: [{ sender: { $ne: req.user.id }, readBy: { $nin: req.user.id } }],
+    });
 
     if (chatDetails) {
       return res.status(200).json({
         status: 200,
         message: "Chat Fetched",
         chat: chatDetails,
+        unreadMessageCount,
       });
     } else {
       return res.status(400).json({

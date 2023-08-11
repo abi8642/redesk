@@ -108,7 +108,6 @@ exports.fetchChats = async (req, res) => {
       });
 
       chat.unreadMessageCount = unreadMessageCount;
-      console.log("chat", chat);
 
       obj.chat = chat;
       obj.unreadMessageCount = unreadMessageCount;

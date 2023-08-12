@@ -187,6 +187,19 @@ exports.createGroupChat = async (req, res) => {
   let group_members = req.body.group_members;
   group_members.push(req.user.id);
 
+  let findGroupName = await Chat.find({
+    isGroupChat: true,
+    chatName: req.body.name,
+    users: { $elemMatch: { $in: group_members } },
+  });
+
+  if (findGroupName.length > 0) {
+    return res.status(400).send({
+      status: 400,
+      message: "Can not create a group with already exist group name",
+    });
+  }
+
   if (group_members.length <= 2) {
     return res.status(400).send({
       status: 400,

@@ -133,9 +133,9 @@ io.on("connection", (socket) => {
     socket.broadcast.emit("taskEdit", data);
   });
 
-  // socket.on("disconnect", () => {
-  //   socket.leave(socket.id);
-  // });
+  socket.on("disconnect", () => {
+    socket.leave(socket.id);
+  });
 });
 // Use Routes
 

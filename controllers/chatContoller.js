@@ -46,7 +46,6 @@ exports.createSingleChat = async (req, res) => {
       chatDoc = await Chat.create(chatData);
     }
 
-    console.log("chatDoc", chatDoc);
     const chatDetails = await Chat.findOne({ _id: chatDoc._id }).populate(
       "users",
       "_id name email pic"

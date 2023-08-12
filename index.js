@@ -59,10 +59,6 @@ io.on("connection", (socket) => {
 
   socket.on("stop typing", (room) => socket.in(room).emit("stop typing"));
 
-  socket.on("send message", () => {
-    socket.emit("message", "Hi Subha");
-  });
-
   socket.on("new message", (newMessageReceived) => {
     var chat = newMessageReceived.chat;
     if (!chat) return console.log("chat not defined");
@@ -138,8 +134,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on("disconnect", () => {
-    console.log("USER DISCONNECTED");
-    socket.leave(userData._id);
+    socket.leave(socket.id);
   });
 });
 // Use Routes

@@ -43,11 +43,8 @@ const io = require("socket.io")(server, {
 });
 
 io.on("connection", (socket) => {
-  console.log("clint connected " + socket.id);
-
   socket.on("userJoin", (id) => {
     socket.join(id);
-    console.log("user joined room " + id);
   });
 
   socket.on("joinproject", async (data) => {
@@ -66,11 +63,6 @@ io.on("connection", (socket) => {
     console.log(data);
     console.log(projectList);
     projectList.forEach((project) => socket.join("project:" + project._id));
-  });
-
-  socket.on("join", (data) => {
-    socket.join(data.im);
-    console.log("user joined room " + data.im);
   });
 
   socket.on("sendComment", (data) => {
@@ -98,15 +90,8 @@ io.on("connection", (socket) => {
     socket.broadcast.emit("taskEdit", data);
   });
 
-  //Chat Sockets
-  socket.on("setup", (userData) => {
-    socket.join(userData._id);
-    socket.emit("connected");
-  });
-
   socket.on("join chat", (room) => {
     socket.join(room);
-    console.log("User Joined Room: " + room);
   });
 
   socket.on("typing", (room) => {
@@ -135,23 +120,14 @@ io.on("connection", (socket) => {
     });
   });
 
-  socket.on("send message", () => {
-    socket.emit("message", "Hi Subha");
-  });
-
-  socket.on("new message", (newMessageRecieved) => {
-    console.log("mesaage", newMessageRecieved);
-
-    // socket.emit("message", "Hi Subha");
-    var chat = newMessageRecieved.chat;
-    // console.log(chat);
+  socket.on("new message", (newMessageReceived) => {
+    let chat = newMessageReceived.chat;
     if (!chat) return console.log("chat not defined");
     if (!chat.users) return console.log("chat.users not defined");
 
     chat.users.forEach((user) => {
-      if (user._id == newMessageRecieved.sender._id) return;
-      console.log("new Message was", newMessageRecieved.sender._id, user._id);
-      socket.in(user._id).emit("message recieved", newMessageRecieved);
+      if (user._id == newMessageReceived.sender._id) return;
+      socket.in(user._id).emit("message received", newMessageReceived);
     });
 
     socket.off("setup", () => {

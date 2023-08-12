@@ -98,7 +98,8 @@ exports.fetchChats = async (req, res) => {
       select: "name pic email",
     });
 
-    let chatListArray = [];
+    let 
+    chatListArray = [];
 
     let obj = {};
     for (let chat of chatList) {

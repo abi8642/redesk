@@ -156,59 +156,59 @@ exports.fetchChats = async (req, res) => {
 };
 
 exports.createGroupChat = async (req, res) => {
-  let blankFields = [];
-  if (!req.body.name) {
-    blankFields.push(" Group name ");
-  }
-  if (!req.body.group_members) {
-    blankFields.push(" Group members ");
-  }
+  try {
+    let blankFields = [];
+    if (!req.body.name) {
+      blankFields.push(" Group name ");
+    }
+    if (!req.body.group_members) {
+      blankFields.push(" Group members ");
+    }
 
-  if (blankFields.length > 0) {
-    return res.status(400).json({
-      status: 400,
-      message: `${blankFields} required to create group chat`,
-    });
-  }
-
-  for (let userID of req.body.group_members) {
-    let checkUserID = await User.findOne({
-      _id: userID,
-      "organisation_list.organisation": req.user.organisation.organisation,
-    });
-
-    if (!checkUserID) {
+    if (blankFields.length > 0) {
       return res.status(400).json({
         status: 400,
-        msg: "User Not Found",
+        message: `${blankFields} required to create group chat`,
       });
     }
-  }
 
-  let group_members = req.body.group_members;
-  group_members.push(req.user.id);
+    for (let userID of req.body.group_members) {
+      let checkUserID = await User.findOne({
+        _id: userID,
+        "organisation_list.organisation": req.user.organisation.organisation,
+      });
 
-  let findGroupName = await Chat.find({
-    isGroupChat: true,
-    chatName: req.body.name,
-    users: { $elemMatch: { $in: group_members } },
-  });
+      if (!checkUserID) {
+        return res.status(400).json({
+          status: 400,
+          msg: "User Not Found",
+        });
+      }
+    }
 
-  if (findGroupName.length > 0) {
-    return res.status(400).send({
-      status: 400,
-      message: "Can not create a group with already exist group name",
+    let group_members = req.body.group_members;
+    group_members.push(req.user.id);
+
+    let findGroupName = await Chat.find({
+      isGroupChat: true,
+      chatName: req.body.name,
+      users: { $elemMatch: { $in: group_members } },
     });
-  }
 
-  if (group_members.length <= 2) {
-    return res.status(400).send({
-      status: 400,
-      message: "More than 2 users are required to create group chat",
-    });
-  }
+    if (findGroupName.length > 0) {
+      return res.status(400).send({
+        status: 400,
+        message: "Can not create a group with already exist group name",
+      });
+    }
 
-  try {
+    if (group_members.length <= 2) {
+      return res.status(400).send({
+        status: 400,
+        message: "More than 2 users are required to create group chat",
+      });
+    }
+
     const groupChat = await Chat.create({
       chatName: req.body.name,
       users: group_members,

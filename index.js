@@ -47,7 +47,7 @@ io.on("connection", (socket) => {
     socket.join(id);
   });
 
-  socket.on("join_chat", (room) => {
+  socket.on("join chat", (room) => {
     socket.join(room);
     console.log("User Joined Room: " + room);
   });
@@ -60,14 +60,17 @@ io.on("connection", (socket) => {
   socket.on("stop typing", (room) => socket.in(room).emit("stop typing"));
 
   socket.on("new message", (newMessageReceived) => {
-    var chat = newMessageReceived.chat;
     if (!chat) return console.log("chat not defined");
     if (!chat.users) return console.log("chat.users not defined");
 
     chat.users.forEach((user) => {
       if (user._id == newMessageReceived.sender._id) return;
       socket.in(user._id).emit("message received", newMessageReceived);
-      socket.in(user._id).emit("reload_chatList", newMessageReceived);
+    });
+
+    socket.off("setup", () => {
+      console.log("USER DISCONNECTED");
+      socket.leave(userData._id);
     });
   });
 
@@ -131,10 +134,6 @@ io.on("connection", (socket) => {
 
   socket.on("taskEdit", (data) => {
     socket.broadcast.emit("taskEdit", data);
-  });
-
-  socket.on("disconnect", () => {
-    socket.leave(socket.id);
   });
 });
 // Use Routes

@@ -8,6 +8,7 @@ const { validationResult } = require("express-validator");
 const User = require("../models/user");
 const { sendMail } = require("../services/sendEmail");
 const { sendPushNotification } = require("../services/configPushNotification");
+const project = require("../models/project");
 
 //create task
 exports.createTask = async (req, res) => {
@@ -604,24 +605,29 @@ exports.getTaskById = (req, res) => {
   try {
     const task_id = { _id: req.params.id };
     TaskModel.findOne(task_id)
-      .populate(
-        "project_id comments.user created_by project_id.created_by task_assignee project_assignee",
-        "project_name project_desc project_status project_priority project_assignee project_leader project_start_date project_end_date name pic created_by"
-      )
-      .exec((err, docs) => {
+      .populate({
+        path: "project_id comments.user created_by task_assignee",
+        select:
+          "project_name project_desc project_status project_priority project_start_date project_end_date created_by name pic email",
+        populate: {
+          path: "project_assignee project_leader created_by",
+          select: "name email pic",
+          model: "User",
+        },
+      })
+      .exec(async (err, docs) => {
         if (!err) {
           return res.status(200).send({ status: "200", message: "Task", docs });
-        } else {
-          return res.status(500).send({
-            status: "500",
-            message: "Failed to retrieve the task details. Try again later",
-          });
         }
+        return res.status(500).send({
+          status: "500",
+          message: "Failed to retrieve the task details. Try again later" + err,
+        });
       });
   } catch (err) {
     return res.status(500).send({
       status: "500",
-      message: "Failed to retrieve the task details. Try again later",
+      message: "Failed to retrieve the task details. Try again later" + err,
     });
   }
 };

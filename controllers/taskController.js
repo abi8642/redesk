@@ -1207,7 +1207,7 @@ exports.reminderTask = async (req, res) => {
                 token: eachTaskAssigneeData.notification_subscription,
               };
 
-              // await sendPushNotification(message);
+              await sendPushNotification(message);
             }
           }
         }

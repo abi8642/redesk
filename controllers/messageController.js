@@ -74,7 +74,7 @@ exports.sendMessage = async (req, res) => {
             if (err) {
               return res.status(400).send({
                 status: 400,
-                message: "Failed Send File" + err,
+                message: "Failed Send File " + err,
               });
             }
           }

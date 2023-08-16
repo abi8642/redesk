@@ -6,6 +6,7 @@ const fileUpload = require("express-fileupload");
 const path = require("path");
 const routers = require("./routes/router");
 const User = require("./models/user");
+const { sendPushNotification } = require("./services/configPushNotification");
 const { writeFile } = require("fs");
 const project = require("./models/project");
 require("./db/db_connection");
@@ -43,11 +44,8 @@ const io = require("socket.io")(server, {
 });
 
 io.on("connection", (socket) => {
-  console.log("clint connected " + socket.id);
-
   socket.on("userJoin", (id) => {
     socket.join(id);
-    console.log("user joined room " + id);
   });
 
   socket.on("joinproject", async (data) => {
@@ -117,12 +115,6 @@ io.on("connection", (socket) => {
   socket.on("stop typing", (room) => socket.in(room).emit("stop typing"));
 
   socket.on("upload", (data, callback) => {
-    // console.log(data); // <Buffer 25 50 44 ...>
-    //broadcast the file to all the users in the room
-    // socket.emit("add image", file);
-    // socket.broadcast.emit("add image", file);
-    // save the content to the disk, for example
-
     if (!data.receiver_id) return console.log("chat.receiver_id not defined");
 
     data.receiver_id.forEach((user) => {
@@ -135,24 +127,29 @@ io.on("connection", (socket) => {
     });
   });
 
-  socket.on("send message", () => {
-    socket.emit("message", "Hi Subha");
-  });
-
   socket.on("new message", (newMessageRecieved) => {
-    console.log("mesaage", newMessageRecieved);
+    try {
+      let chat = newMessageRecieved.chat;
+      if (!chat) return console.log("chat not defined");
+      if (!chat.users) return console.log("chat.users not defined");
 
-    // socket.emit("message", "Hi Subha");
-    var chat = newMessageRecieved.chat;
-    // console.log(chat);
-    if (!chat) return console.log("chat not defined");
-    if (!chat.users) return console.log("chat.users not defined");
+      chat.users.forEach(async (user) => {
+        if (user._id == newMessageRecieved.sender._id) return;
+        const userData = await User.findById(user._id);
+        const message = {
+          notification: {
+            title: "New Message Received",
+            body: `${user.name} Send You a Message`,
+          },
+          token: userData.notification_subscription,
+        };
 
-    chat.users.forEach((user) => {
-      if (user._id == newMessageRecieved.sender._id) return;
-      console.log("new Message was", newMessageRecieved.sender._id, user._id);
-      socket.in(user._id).emit("message recieved", newMessageRecieved);
-    });
+        await sendPushNotification(message);
+        socket.in(user._id).emit("message recieved", newMessageRecieved);
+      });
+    } catch (err) {
+      return err;
+    }
 
     socket.off("setup", () => {
       console.log("USER DISCONNECTED");

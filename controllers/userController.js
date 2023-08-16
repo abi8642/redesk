@@ -903,11 +903,11 @@ exports.getSingleUserData = async (req, res) => {
   }
 };
 
-exports.allUserFromOrgs = (req, res) => {
+exports.allUserFromOrgs = async (req, res) => {
   try {
     const user = req.user;
 
-    User.find(
+    await User.find(
       {
         organisation_list: {
           $elemMatch: {
@@ -1395,17 +1395,14 @@ exports.allUsers = async (req, res) => {
     if (req.query.search === "") {
       return res.status(400).send({
         status: "400",
-        message: "Enter name or email to find some one",
+        message: "Enter name to find some one",
       });
     }
     const keyword = req.query.search
       ? {
           $and: [
             {
-              $or: [
-                { name: { $regex: req.query.search, $options: "i" } },
-                // { email: { $regex: req.query.search, $options: "i" } },
-              ],
+              $or: [{ name: { $regex: req.query.search, $options: "i" } }],
             },
             {
               organisation_list: {

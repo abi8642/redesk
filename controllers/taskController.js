@@ -1207,7 +1207,7 @@ exports.reminderTask = async (req, res) => {
                 token: eachTaskAssigneeData.notification_subscription,
               };
 
-              // await sendPushNotification(message);
+              await sendPushNotification(message);
             }
           }
         }
@@ -1433,7 +1433,7 @@ exports.addTaskComment = async (req, res) => {
   } catch (error) {
     return res
       .status(500)
-      .send({ status: 500, message: "Failed to add comment" + error });
+      .send({ status: 500, message: "Failed to add comment " + error });
   }
 };
 

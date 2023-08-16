@@ -97,6 +97,7 @@ const {
   sendMessage,
 } = require("../controllers/messageController");
 const {
+  searchInChat,
   createSingleChat,
   accessChat,
   fetchChats,
@@ -308,15 +309,16 @@ router.post("/resetPassword/:id", resetPassword);
 
 //Chat routes
 router.get("/user", requiredAuth(), allUsers);
+router.get("/searchInChat", requiredAuth(), searchInChat);
 router.get("/getChatMessage/:chatId", requiredAuth(), allMessages);
 router.post("/sendMessage/", requiredAuth(), sendMessage);
 router.post("/getChat/", requiredAuth(), accessChat);
 router.post("/createChat/", requiredAuth(), createSingleChat);
 router.get("/chatList/", requiredAuth(), fetchChats);
 router.post("/createGroup", requiredAuth(), createGroupChat);
-router.put("/rename", requiredAuth(), renameGroup);
-router.put("/groupremove", requiredAuth(), removeFromGroup);
-router.put("/groupadd", requiredAuth(), addToGroup);
+router.post("/renameGroup", requiredAuth(), renameGroup);
+router.post("/removeGroupMember", requiredAuth(), removeFromGroup);
+router.post("/addGroupMember", requiredAuth(), addToGroup);
 
 //fileSystem
 // router.get("/upload", requiredAuth(), uploadFile);

@@ -2,6 +2,67 @@ const Chat = require("../models/chatModel");
 const Message = require("../models/messageModel");
 const User = require("../models/user");
 
+exports.searchInChat = async (req, res) => {
+  try {
+    const searchData = req.query.search;
+
+    if (!searchData) {
+      return res.status(500).send({
+        status: 500,
+        message: "Can not search blank",
+      });
+    }
+
+    const userQuery = {
+      $and: [
+        {
+          _id: { $ne: req.user.id },
+        },
+        {
+          name: { $regex: searchData, $options: "i" },
+        },
+        {
+          organisation_list: {
+            $elemMatch: {
+              organisation: req.user.organisation.organisation,
+              status: "approved",
+            },
+          },
+        },
+      ],
+    };
+
+    const chatQuery = {
+      isGroupChat: true,
+      chatName: { $regex: searchData, $options: "i" },
+      users: { $elemMatch: { $eq: req.user.id } },
+    };
+
+    let data = {};
+
+    const filterChat = await Chat.find(chatQuery);
+    data.groupChats = filterChat;
+
+    const filterUser = await User.find(userQuery, {
+      name: 1,
+      email: 1,
+      pic: 1,
+    });
+    data.peoples = filterUser;
+
+    return res.status(200).send({
+      status: 200,
+      message: "Data Fetched",
+      data,
+    });
+  } catch (err) {
+    return res.status(500).send({
+      status: 500,
+      message: "Failed to search in chat " + err,
+    });
+  }
+};
+
 exports.createSingleChat = async (req, res) => {
   try {
     if (!req.body.userID) {

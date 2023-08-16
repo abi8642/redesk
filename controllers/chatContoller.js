@@ -171,6 +171,13 @@ exports.createGroupChat = async (req, res) => {
       });
     }
 
+    if (req.body.group_members < 1) {
+      return res.status(400).json({
+        status: 400,
+        message: "Select atleast one member",
+      });
+    }
+
     for (let userID of req.body.group_members) {
       let checkUserID = await User.findOne({
         _id: userID,
@@ -201,13 +208,6 @@ exports.createGroupChat = async (req, res) => {
       });
     }
 
-    if (group_members.length <= 2) {
-      return res.status(400).send({
-        status: 400,
-        message: "More than 2 users are required to create group chat",
-      });
-    }
-
     const groupChat = await Chat.create({
       chatName: req.body.name,
       users: group_members,
@@ -228,74 +228,188 @@ exports.createGroupChat = async (req, res) => {
 };
 
 exports.renameGroup = async (req, res) => {
-  const { chatId, chatName } = req.body;
+  try {
+    const { chatId, chatName } = req.body;
+    let blankFields = [];
 
-  const updatedChat = await Chat.findByIdAndUpdate(
-    chatId,
-    {
-      chatName: chatName,
-    },
-    {
-      new: true,
+    if (!chatId) {
+      blankFields.push(" ChatId ");
     }
-  )
-    .populate("users", "-password")
-    .populate("groupAdmin", "-password");
+    if (!chatName) {
+      blankFields.push(" Chat Name ");
+    }
 
-  if (!updatedChat) {
-    res.status(404);
-    throw new Error("Chat Not Found");
-  } else {
-    res.json(updatedChat);
+    if (blankFields.length > 0) {
+      return res.status(400).json({
+        status: 400,
+        message: `${blankFields} required to rename group`,
+      });
+    }
+
+    let groupData = await Chat.findById(chatId);
+
+    let findGroupName = await Chat.find({
+      _id: { $ne: chatId },
+      isGroupChat: true,
+      chatName: chatName,
+      users: { $elemMatch: { $in: groupData.users } },
+    });
+
+    if (findGroupName.length > 0) {
+      return res.status(400).send({
+        status: 400,
+        message: "Can not rename a group with already exist group name",
+      });
+    }
+
+    const updatedChat = await Chat.findByIdAndUpdate(
+      chatId,
+      {
+        chatName: chatName,
+      },
+      {
+        new: true,
+      }
+    ).populate("users groupAdmin", "name email pic");
+
+    if (!updatedChat) {
+      return res.status(400).send({
+        status: 400,
+        message: "Failed to rename group",
+      });
+    } else {
+      return res.status(200).send({
+        status: 200,
+        message: "Successfully renamed group",
+        updatedChat,
+      });
+    }
+  } catch (err) {
+    return res.status(500).send({
+      status: 500,
+      message: "Failed to rename group" + err,
+    });
   }
 };
 
 exports.removeFromGroup = async (req, res) => {
-  const { chatId, userId } = req.body;
+  try {
+    const { chatId, userId } = req.body;
+    let blankFields = [];
 
-  // check if the requester is admin
-
-  const removed = await Chat.findByIdAndUpdate(
-    chatId,
-    {
-      $pull: { users: userId },
-    },
-    {
-      new: true,
+    if (!chatId) {
+      blankFields.push(" ChatId ");
     }
-  )
-    .populate("users", "-password")
-    .populate("groupAdmin", "-password");
+    if (!userId) {
+      blankFields.push(" UserId ");
+    }
 
-  if (!removed) {
-    res.status(404);
-    throw new Error("Chat Not Found");
-  } else {
-    res.json(removed);
+    if (blankFields.length > 0) {
+      return res.status(400).json({
+        status: 400,
+        message: `${blankFields} required to remove group member`,
+      });
+    }
+
+    const groupData = await Chat.findOne({
+      _id: chatId,
+      users: userId,
+    });
+
+    if (!groupData) {
+      return res.status(200).json({
+        status: 200,
+        message: "The member you want to remove does not exist in the group",
+      });
+    }
+
+    const removed = await Chat.findByIdAndUpdate(
+      chatId,
+      {
+        $pull: { users: userId },
+      },
+      {
+        new: true,
+      }
+    ).populate("users groupAdmin", "name email pic");
+
+    if (!removed) {
+      return res.status(400).send({
+        status: 400,
+        message: "Failed to remove group member",
+      });
+    } else {
+      return res.status(200).send({
+        status: 200,
+        message: "Successfully removed group member",
+        removed,
+      });
+    }
+  } catch (err) {
+    return res.status(500).send({
+      status: 500,
+      message: "Failed to remove group member " + err,
+    });
   }
 };
 
 exports.addToGroup = async (req, res) => {
-  const { chatId, userId } = req.body;
+  try {
+    const { chatId, userId } = req.body;
+    let blankFields = [];
 
-  // check if the requester is admin
-
-  const added = await Chat.findByIdAndUpdate(
-    chatId,
-    {
-      $push: { users: userId },
-    },
-    {
-      new: true,
+    if (!chatId) {
+      blankFields.push(" ChatId ");
     }
-  )
-    .populate("users", "-password")
-    .populate("groupAdmin", "-password");
+    if (!userId) {
+      blankFields.push(" UserId ");
+    }
 
-  if (!added) {
-    res.status(404);
-    throw new Error("Chat Not Found");
-  } else {
-    res.json(added);
+    if (blankFields.length > 0) {
+      return res.status(400).json({
+        status: 400,
+        message: `${blankFields} required to add group member`,
+      });
+    }
+
+    const groupData = await Chat.findOne({
+      _id: chatId,
+      users: userId,
+    });
+
+    if (groupData) {
+      return res.status(200).json({
+        status: 200,
+        message: "This member is already exist in the group",
+      });
+    }
+
+    const memberAdded = await Chat.findByIdAndUpdate(
+      chatId,
+      {
+        $push: { users: userId },
+      },
+      {
+        new: true,
+      }
+    ).populate("users groupAdmin", "name email pic");
+
+    if (!memberAdded) {
+      return res.status(400).send({
+        status: 400,
+        message: "Failed to add group member",
+      });
+    } else {
+      return res.status(200).send({
+        status: 200,
+        message: "Successfully added group member",
+        memberAdded,
+      });
+    }
+  } catch (err) {
+    return res.status(500).send({
+      status: 500,
+      message: "Failed to add group member " + err,
+    });
   }
 };

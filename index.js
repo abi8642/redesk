@@ -42,6 +42,7 @@ const io = require("socket.io")(server, {
     methods: ["GET", "POST", "PUT"],
   },
 });
+
 io.on("connection", (socket) => {
   socket.on("userJoin", (id) => {
     socket.join(id);

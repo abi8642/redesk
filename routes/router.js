@@ -314,9 +314,9 @@ router.post("/getChat/", requiredAuth(), accessChat);
 router.post("/createChat/", requiredAuth(), createSingleChat);
 router.get("/chatList/", requiredAuth(), fetchChats);
 router.post("/createGroup", requiredAuth(), createGroupChat);
-router.put("/rename", requiredAuth(), renameGroup);
-router.put("/groupremove", requiredAuth(), removeFromGroup);
-router.put("/groupadd", requiredAuth(), addToGroup);
+router.post("/renameGroup", requiredAuth(), renameGroup);
+router.post("/removeGroupMember", requiredAuth(), removeFromGroup);
+router.post("/addGroupMember", requiredAuth(), addToGroup);
 
 //fileSystem
 // router.get("/upload", requiredAuth(), uploadFile);

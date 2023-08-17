@@ -132,7 +132,7 @@ exports.createTask = async (req, res) => {
                         Task_due_on: <b>${task.task_due_on}</b><br>
                         Task_priority: <b>${task.task_priority}</b><br>
                         Task_created_by:<b>${user.name}</b>`;
-                        sendMail(assigneeMail, subjects, sendMsgs);
+                        await sendMail(assigneeMail, subjects, sendMsgs);
                       }
                     }
                   }
@@ -175,7 +175,7 @@ exports.createTask = async (req, res) => {
                         Task_due_on: <b>${task.task_due_on}</b><br>
                         Task_priority: <b>${task.task_priority}</b><br>
                         Task_created_by:<b>${user.name}</b>`;
-                      sendMail(assigneeMail, subjects, sendMsgs);
+                      await sendMail(assigneeMail, subjects, sendMsgs);
                     }
                   }
                 }
@@ -212,7 +212,7 @@ exports.createTask = async (req, res) => {
                   Task_due_on: <b>${task.task_due_on}</b><br>
                   Task_priority: <b>${task.task_priority}</b><br>
                   Task_created_by:<b>${user.name}</b>`;
-                  sendMail(assigneeMail, subjects, sendMsgs);
+                  await sendMail(assigneeMail, subjects, sendMsgs);
                 }
 
                 if (totalUserList) {
@@ -244,7 +244,7 @@ exports.createTask = async (req, res) => {
                         Task_due_on: <b>${task.task_due_on}</b><br>
                         Task_priority: <b>${task.task_priority}</b><br>
                         Task_created_by:<b>${user.name}</b>`;
-                      sendMail(assigneeMail, subjects, sendMsgs);
+                      await sendMail(assigneeMail, subjects, sendMsgs);
                     }
                   }
                 }
@@ -285,10 +285,9 @@ exports.createTask = async (req, res) => {
               }
             })
             .catch((err) => {
-              console.log("err", err);
               return res.status(500).send({
                 status: "500",
-                message: "Unable to create task. Try again later",
+                message: "Unable to create task. Try again later " + err,
               });
             });
         }
@@ -297,7 +296,7 @@ exports.createTask = async (req, res) => {
   } catch (err) {
     return res.status(500).send({
       status: "500",
-      message: "Unable to create task. Try again later",
+      message: "Unable to create task. Try again later " + err,
     });
   }
 };

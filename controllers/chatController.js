@@ -63,6 +63,39 @@ exports.searchInChat = async (req, res) => {
   }
 };
 
+exports.getUserListForChat = async (req, res) => {
+  try {
+    const user = req.user;
+    let condition = {
+      "organisation_list.role": { $nin: "client" },
+    };
+    if (
+      user.organisation.role === "admin" ||
+      user.organisation.role === "subadmin"
+    ) {
+      condition = {};
+    }
+    const userList = await User.find(condition, { name: 1, email: 1, pic: 1 });
+
+    if (userList && userList.length > 0) {
+      return res.status(200).send({
+        status: 200,
+        message: "User List Fetched",
+        userList,
+      });
+    }
+    return res.status(400).send({
+      status: 400,
+      message: "Can not fetch user list",
+    });
+  } catch (err) {
+    return res.status(500).send({
+      status: 500,
+      message: "Failed to get user list" + err,
+    });
+  }
+};
+
 exports.createSingleChat = async (req, res) => {
   try {
     if (!req.body.userID) {

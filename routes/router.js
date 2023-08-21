@@ -98,6 +98,7 @@ const {
 } = require("../controllers/messageController");
 const {
   searchInChat,
+  getUserListForChat,
   createSingleChat,
   accessChat,
   fetchChats,
@@ -105,7 +106,7 @@ const {
   renameGroup,
   removeFromGroup,
   addToGroup,
-} = require("../controllers/chatContoller");
+} = require("../controllers/chatController");
 
 const { query, param, body } = require("express-validator");
 const {
@@ -310,6 +311,7 @@ router.post("/resetPassword/:id", resetPassword);
 //Chat routes
 router.get("/user", requiredAuth(), allUsers);
 router.get("/searchInChat", requiredAuth(), searchInChat);
+router.get("/getUserListForChat", requiredAuth(), getUserListForChat);
 router.get("/getChatMessage/:chatId", requiredAuth(), allMessages);
 router.post("/sendMessage/", requiredAuth(), sendMessage);
 router.post("/getChat/", requiredAuth(), accessChat);

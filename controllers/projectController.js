@@ -99,6 +99,10 @@ exports.createProject = async (req, res) => {
                 await sendPushNotification(message);
               }
 
+              req.io
+                .to(eachProjectAssigneeData._id)
+                .emit("project_created", "Success");
+
               const assigneeMail = eachProjectAssigneeData.email;
               const subjects = "You are assign on a project";
               const sendMsgs = `
@@ -137,6 +141,10 @@ exports.createProject = async (req, res) => {
                 }
               }
 
+              req.io
+                .to(eachProjectLeaderData._id)
+                .emit("project_created", "Success");
+
               const assigneeMail = eachProjectLeaderData.email;
               const subjects = "You are assign on a project";
               const sendMsgs = `
@@ -173,6 +181,10 @@ exports.createProject = async (req, res) => {
             await sendPushNotification(message);
           }
 
+          req.io
+            .to(eachProjectClientData._id)
+            .emit("project_created", "Success");
+
           const assigneeMail = eachProjectClientData.email;
           const subjects = "New Project Assigned";
           const sendMsgs = `
@@ -202,6 +214,8 @@ exports.createProject = async (req, res) => {
 
                 await sendPushNotification(message);
               }
+
+              req.io.to(singleUser._id).emit("project_created", "Success");
 
               const assigneeMail = singleUser.email;
               const subjects = "New Project Created";
@@ -652,6 +666,10 @@ exports.editProject = async (req, res) => {
                 await sendPushNotification(message);
               }
 
+              req.io
+                .to(eachProjectAssigneeData._id)
+                .emit("project_updated", "Success");
+
               const assigneeMail = eachProjectAssigneeData.email;
               const subjects = "Project Updated";
               const sendMsgs = `
@@ -689,6 +707,10 @@ exports.editProject = async (req, res) => {
                 }
               }
 
+              req.io
+                .to(eachProjectLeaderData._id)
+                .emit("project_updated", "Success");
+
               const assigneeMail = eachProjectLeaderData.email;
               const subjects = "Project Updated";
               const sendMsgs = `
@@ -724,6 +746,10 @@ exports.editProject = async (req, res) => {
             await sendPushNotification(message);
           }
 
+          req.io
+            .to(eachProjectClientData._id)
+            .emit("project_updated", "Success");
+
           const assigneeMail = eachProjectClientData.email;
           const subjects = "Project Updated";
           const sendMsgs = `
@@ -750,6 +776,8 @@ exports.editProject = async (req, res) => {
 
                 await sendPushNotification(message);
               }
+
+              req.io.to(singleUser._id).emit("project_updated", "Success");
 
               const assigneeMail = singleUser.email;
               const subjects = "Project Updated";
@@ -903,6 +931,10 @@ exports.changeProjectStatus = async (req, res) => {
                 await sendPushNotification(message);
               }
 
+              req.io
+                .to(eachProjectAssigneeData._id)
+                .emit("project_status_changed", "Success");
+
               const assigneeMail = eachProjectAssigneeData.email;
               const subjects = "Project Status Changed";
               const sendMsgs = `Project ${docs.project_name} status changes from ${getProject.project_status} to ${docs.project_status} by ${user.name}`;
@@ -936,6 +968,10 @@ exports.changeProjectStatus = async (req, res) => {
                 }
               }
 
+              req.io
+                .to(eachProjectLeaderData._id)
+                .emit("project_status_changed", "Success");
+
               const assigneeMail = eachProjectLeaderData.email;
               const subjects = "Project Status Changed";
               const sendMsgs = `Project ${docs.project_name} status changes from ${getProject.project_status} to ${docs.project_status} by ${user.name}`;
@@ -965,6 +1001,10 @@ exports.changeProjectStatus = async (req, res) => {
             await sendPushNotification(message);
           }
 
+          req.io
+            .to(eachProjectClientData._id)
+            .emit("project_status_changed", "Success");
+
           const assigneeMail = eachProjectClientData.email;
           const subjects = "Project Status Changed";
           const sendMsgs = `Project ${docs.project_name} status changes from ${getProject.project_status} to ${docs.project_status} by ${user.name}`;
@@ -987,6 +1027,10 @@ exports.changeProjectStatus = async (req, res) => {
 
                 await sendPushNotification(message);
               }
+
+              req.io
+                .to(singleUser._id)
+                .emit("project_status_changed", "Success");
 
               const assigneeMail = singleUser.email;
               const subjects = "Project Status Changed";
@@ -1178,13 +1222,13 @@ exports.assignProject = async (req, res) => {
       date_time: new Date(),
       log_type: 2,
       log_heading: "Project Assignee Updated",
-      log_message: `Update Project ${docs.project_name}'s Assignee by ${user.name}`,
+      log_message: `Update Project ${updatedProject.project_name}'s Assignee by ${user.name}`,
       before_update: project.project_assignee,
       request: req.body,
       response: updatedProject.project_assignee,
       log_for: {
-        id: "" + docs._id,
-        name: docs.project_name,
+        id: "" + updatedProject._id,
+        name: updatedProject.project_name,
       },
       log_by: user.id,
       organisation_id: user.organisation.organisation,
@@ -1198,6 +1242,7 @@ exports.assignProject = async (req, res) => {
       data,
     });
   } catch (err) {
+    console.log(err);
     return res.status(500).send({
       status: "500",
       message: "Failed to update project. Try again later" + err,
@@ -1329,13 +1374,13 @@ exports.assignTeamLeader = async (req, res) => {
       date_time: new Date(),
       log_type: 2,
       log_heading: "Project Leader Updated",
-      log_message: `Update Project ${docs.project_name}'s Leader by ${user.name}`,
+      log_message: `Update Project ${updatedProject.project_name}'s Leader by ${user.name}`,
       before_update: project.project_leader,
       request: req.body,
       response: updatedProject.project_leader,
       log_for: {
-        id: "" + docs._id,
-        name: docs.project_name,
+        id: "" + updatedProject._id,
+        name: updatedProject.project_name,
       },
       log_by: user.id,
       organisation_id: user.organisation.organisation,
@@ -1419,6 +1464,70 @@ exports.addProjectAttachment = async (req, res) => {
             });
           }
 
+          // docs.project_assignee.map(async (assignee_id) => {
+          //   const assigneeData = await User.findById(assignee_id);
+
+          //   if (assigneeData && assigneeData.notification_subscription) {
+          //     if (assigneeData._id + "" !== "" + user.id) {
+          //       const message = {
+          //         notification: {
+          //           title: "New Project Attachment Added",
+          //           body: `New project attachment added by ${user.name}.\nGo check it out.`,
+          //         },
+          //         token: assigneeData.notification_subscription,
+          //       };
+          //       await sendPushNotification(message);
+          //     }
+          //   }
+          // });
+
+          // docs.project_leader.map(async (leader_id) => {
+          //   const leaderData = await User.findById(leader_id);
+
+          //   if (leaderData && leaderData.notification_subscription) {
+          //     if (leaderData._id + "" !== "" + user.id) {
+          //       const message = {
+          //         notification: {
+          //           title: "New Project Attachment Added",
+          //           body: `New project attachment added by ${user.name}.\nGo check it out.`,
+          //         },
+          //         token: leaderData.notification_subscription,
+          //       };
+          //       await sendPushNotification(message);
+          //     }
+          //   }
+          // });
+
+          // const clientData = await User.findById(client_id);
+
+          // if (clientData && clientData.notification_subscription) {
+          //   if (clientData._id + "" !== "" + user.id) {
+          //     const message = {
+          //       notification: {
+          //         title: "New Project Attachment Added",
+          //         body: `New project attachment added by ${user.name}.\nGo check it out.`,
+          //       },
+          //       token: clientData.notification_subscription,
+          //     };
+          //     await sendPushNotification(message);
+          //   }
+          // }
+
+          // const createrData = await User.findById(creater_id);
+
+          // if (createrData && createrData.notification_subscription) {
+          //   if (createrData._id + "" !== "" + user.id) {
+          //     const message = {
+          //       notification: {
+          //         title: "New Project Attachment Added",
+          //         body: `New project attachment added by ${user.name}.\nGo check it out.`,
+          //       },
+          //       token: createrData.notification_subscription,
+          //     };
+          //     await sendPushNotification(message);
+          //   }
+          // }
+
           let log = {
             date_time: new Date(),
             log_type: 2,
@@ -1445,14 +1554,14 @@ exports.addProjectAttachment = async (req, res) => {
         .catch((error) => {
           return res.status(500).json({
             status: 500,
-            message: "Failed to update project.",
+            message: "Failed to update project." + error,
           });
         });
     });
   } catch (error) {
     return res.status(500).json({
       status: 500,
-      message: "Failed to find project.",
+      message: "Failed to find project." + error,
     });
   }
 };

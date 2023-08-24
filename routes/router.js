@@ -269,12 +269,12 @@ router.post(
   requiredAuth(["admin", "subadmin", "team_leader"]),
   changeProjectStatus
 );
-router.put(
+router.post(
   "/assignProject/:id",
   requiredAuth(["admin", "subadmin", "team_leader"]),
   assignProject
 );
-router.put(
+router.post(
   "/assignTeamLeader/:id",
   requiredAuth(["admin", "subadmin"]),
   assignTeamLeader

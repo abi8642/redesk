@@ -58,19 +58,12 @@ exports.createProject = async (req, res) => {
         let sendTo = [];
         let sendToAdmin = [];
         const totalUserList = await User.find({
-          $and: [
-            {
-              organisation_list: {
-                $elemMatch: {
-                  organisation: user.organisation.organisation,
-                  role: { $in: ["admin", "subadmin"] },
-                },
-              },
+          organisation_list: {
+            $elemMatch: {
+              organisation: user.organisation.organisation,
+              role: { $in: ["admin", "subadmin"] },
             },
-            {
-              _id: { $ne: user.id },
-            },
-          ],
+          },
         });
 
         if (project.project_assignee && project.project_assignee.length > 0) {
@@ -114,35 +107,34 @@ exports.createProject = async (req, res) => {
               _id: eachProjectLeader,
             });
 
-            if (
-              eachProjectLeaderData &&
-              eachProjectLeaderData._id + "" !== "" + user.id
-            ) {
-              sendTo.push(eachProjectLeaderData._id);
-              if (eachProjectLeaderData.notification_subscription) {
-                const message = {
-                  notification: {
-                    title: "New Project Assigned",
-                    body: `You are assigned as a Leader on project "${project.project_name}" by ${user.name}\nStatus: ${project.project_status} Priority: ${project.project_priority}`,
-                  },
-                  token: eachProjectLeaderData.notification_subscription,
-                };
-                await sendPushNotification(message);
-              }
-              req.io
-                .to(eachProjectLeaderData._id)
-                .emit("project_created", "Success");
+            if (eachProjectLeaderData) {
+              if (eachProjectLeaderData._id + "" !== "" + user.id) {
+                sendTo.push(eachProjectLeaderData._id);
+                if (eachProjectLeaderData.notification_subscription) {
+                  const message = {
+                    notification: {
+                      title: "New Project Assigned",
+                      body: `You are assigned as a Leader on project "${project.project_name}" by ${user.name}\nStatus: ${project.project_status} Priority: ${project.project_priority}`,
+                    },
+                    token: eachProjectLeaderData.notification_subscription,
+                  };
+                  await sendPushNotification(message);
+                }
 
-              const assigneeMail = eachProjectLeaderData.email;
-              const subjects = "You are assign on a project";
-              const sendMsgs = `
+                const assigneeMail = eachProjectLeaderData.email;
+                const subjects = "You are assign on a project";
+                const sendMsgs = `
                   Project_Name: <b>${project.project_name}</b><br>
                   Project_due_on: <b>${project.project_end_date}</b><br>
                   Project_priority: <b>${project.project_priority}</b><br>
                   Project_created_by: <b>${user.name}</b><br>
                   Your Role:<b>Leader</b>
                   `;
-              sendMail(assigneeMail, subjects, sendMsgs);
+                sendMail(assigneeMail, subjects, sendMsgs);
+              }
+              req.io
+                .to(eachProjectLeaderData._id)
+                .emit("project_created", "Success");
             }
           }
         }
@@ -183,30 +175,31 @@ exports.createProject = async (req, res) => {
         }
         if (totalUserList && totalUserList.length > 0) {
           for (let singleUser of totalUserList) {
-            sendToAdmin.push(singleUser._id);
+            if (singleUser._id + "" !== "" + user.id) {
+              sendToAdmin.push(singleUser._id);
 
-            if (singleUser.notification_subscription) {
-              const message = {
-                notification: {
-                  title: "New Project Created",
-                  body: `New project ${project.project_name} created by ${user.name}\nStatus: ${project.project_status} Priority: ${project.project_priority}`,
-                },
-                token: singleUser.notification_subscription,
-              };
+              if (singleUser.notification_subscription) {
+                const message = {
+                  notification: {
+                    title: "New Project Created",
+                    body: `New project ${project.project_name} created by ${user.name}\nStatus: ${project.project_status} Priority: ${project.project_priority}`,
+                  },
+                  token: singleUser.notification_subscription,
+                };
 
-              await sendPushNotification(message);
-            }
+                await sendPushNotification(message);
+              }
 
-            req.io.to(singleUser._id).emit("project_created", "Success");
-
-            const assigneeMail = singleUser.email;
-            const subjects = "New Project Created";
-            const sendMsgs = `
+              const assigneeMail = singleUser.email;
+              const subjects = "New Project Created";
+              const sendMsgs = `
                 Project_Name: <b>${project.project_name}</b><br>
                 Project_due_on: <b>${project.project_end_date}</b><br>
                 Project_priority: <b>${project.project_priority}</b><br>
                 Project_created_by: <b>${user.name}</b>`;
-            sendMail(assigneeMail, subjects, sendMsgs);
+              sendMail(assigneeMail, subjects, sendMsgs);
+            }
+            req.io.to(singleUser._id).emit("project_created", "Success");
           }
         }
         if (sendTo.length > 0) {
@@ -311,6 +304,7 @@ exports.getProject = (req, res) => {
             $or: [
               { project_assignee: user.id },
               { project_leader: user.id },
+              { project_client: user.id },
               { created_by: user.id },
             ],
           },

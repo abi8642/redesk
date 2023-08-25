@@ -599,19 +599,12 @@ exports.editProject = async (req, res) => {
 
         let sendTo = [];
         const totalUserList = await User.find({
-          $and: [
-            {
-              organisation_list: {
-                $elemMatch: {
-                  organisation: user.organisation.organisation,
-                  role: { $in: ["admin", "subadmin"] },
-                },
-              },
+          organisation_list: {
+            $elemMatch: {
+              organisation: user.organisation.organisation,
+              role: { $in: ["admin", "subadmin"] },
             },
-            {
-              _id: { $ne: user.id },
-            },
-          ],
+          },
         });
 
         if (docs.project_assignee && docs.project_assignee.length > 0) {
@@ -620,10 +613,7 @@ exports.editProject = async (req, res) => {
               _id: eachProjectAssignee,
             });
 
-            if (
-              eachProjectAssigneeData &&
-              eachProjectAssigneeData._id + "" !== "" + user.id
-            ) {
+            if (eachProjectAssigneeData) {
               sendTo.push(eachProjectAssigneeData._id);
               if (eachProjectAssigneeData.notification_subscription) {
                 const message = {
@@ -656,36 +646,35 @@ exports.editProject = async (req, res) => {
               _id: eachProjectLeader,
             });
 
-            if (
-              eachProjectLeaderData &&
-              eachProjectLeaderData._id + "" !== "" + user.id
-            ) {
-              sendTo.push(eachProjectLeaderData._id);
-              if (eachProjectLeaderData.notification_subscription) {
-                const message = {
-                  notification: {
-                    title: "Project Updated",
-                    body: `Project ${docs.project_name} is Updated by ${user.name}. Check it now.`,
-                  },
-                  token: eachProjectLeaderData.notification_subscription,
-                };
+            if (eachProjectLeaderData) {
+              if (eachProjectLeaderData._id + "" !== "" + user.id) {
+                sendTo.push(eachProjectLeaderData._id);
+                if (eachProjectLeaderData.notification_subscription) {
+                  const message = {
+                    notification: {
+                      title: "Project Updated",
+                      body: `Project ${docs.project_name} is Updated by ${user.name}. Check it now.`,
+                    },
+                    token: eachProjectLeaderData.notification_subscription,
+                  };
 
-                await sendPushNotification(message);
+                  await sendPushNotification(message);
+                }
+
+                const assigneeMail = eachProjectLeaderData.email;
+                const subjects = "Project Updated";
+                const sendMsgs = `
+                  Project_Name: <b>${docs.project_name}</b><br>
+                  Project_due_on: <b>${docs.project_end_date}</b><br>
+                  Project_priority: <b>${docs.project_priority}</b><br>
+                  Project_created_by: <b>${user.name}</b><br>
+                  Your Role:<b>Leader</b>
+                  `;
+                sendMail(assigneeMail, subjects, sendMsgs);
               }
               req.io
                 .to(eachProjectLeaderData._id)
                 .emit("project_updated", "Success");
-
-              const assigneeMail = eachProjectLeaderData.email;
-              const subjects = "Project Updated";
-              const sendMsgs = `
-                Project_Name: <b>${docs.project_name}</b><br>
-                Project_due_on: <b>${docs.project_end_date}</b><br>
-                Project_priority: <b>${docs.project_priority}</b><br>
-                Project_created_by: <b>${user.name}</b><br>
-                Your Role:<b>Leader</b>
-                `;
-              sendMail(assigneeMail, subjects, sendMsgs);
             }
           }
         }
@@ -725,44 +714,48 @@ exports.editProject = async (req, res) => {
         }
         if (docs.created_by) {
           const creatorData = await User.findById(docs.created_by);
-          if (creatorData && creatorData._id + "" !== "" + user.id) {
-            sendTo.push(creatorData._id);
-            if (creatorData.notification_subscription) {
-              const message = {
-                notification: {
-                  title: "Project Updated",
-                  body: `Project ${docs.project_name} is Updated by ${user.name}. Check it now.`,
-                },
-                token: creatorData.notification_subscription,
-              };
-              await sendPushNotification(message);
+          if (creatorData) {
+            if (creatorData._id + "" !== "" + user.id) {
+              sendTo.push(creatorData._id);
+              if (creatorData.notification_subscription) {
+                const message = {
+                  notification: {
+                    title: "Project Updated",
+                    body: `Project ${docs.project_name} is Updated by ${user.name}. Check it now.`,
+                  },
+                  token: creatorData.notification_subscription,
+                };
+                await sendPushNotification(message);
+              }
             }
             req.io.to(creatorData._id).emit("project_updated", "Success");
           }
         }
         if (totalUserList && totalUserList.length > 0) {
           for (let singleUser of totalUserList) {
-            sendTo.push(singleUser._id);
-            if (singleUser.notification_subscription) {
-              const message = {
-                notification: {
-                  title: "Project Updated",
-                  body: `Project ${docs.project_name} is Updated by ${user.name}. Check it now.`,
-                },
-                token: singleUser.notification_subscription,
-              };
-              await sendPushNotification(message);
+            if (singleUser._id + "" !== "" + user.id) {
+              sendTo.push(singleUser._id);
+              if (singleUser.notification_subscription) {
+                const message = {
+                  notification: {
+                    title: "Project Updated",
+                    body: `Project ${docs.project_name} is Updated by ${user.name}. Check it now.`,
+                  },
+                  token: singleUser.notification_subscription,
+                };
+                await sendPushNotification(message);
+              }
+
+              const assigneeMail = singleUser.email;
+              const subjects = "Project Updated";
+              const sendMsgs = `
+              Project_Name: <b>${docs.project_name}</b><br>
+              Project_due_on: <b>${docs.project_end_date}</b><br>
+              Project_priority: <b>${docs.project_priority}</b><br>
+              Project_created_by: <b>${user.name}</b>`;
+              sendMail(assigneeMail, subjects, sendMsgs);
             }
             req.io.to(singleUser._id).emit("project_updated", "Success");
-
-            const assigneeMail = singleUser.email;
-            const subjects = "Project Updated";
-            const sendMsgs = `
-                Project_Name: <b>${docs.project_name}</b><br>
-                Project_due_on: <b>${docs.project_end_date}</b><br>
-                Project_priority: <b>${docs.project_priority}</b><br>
-                Project_created_by: <b>${user.name}</b>`;
-            sendMail(assigneeMail, subjects, sendMsgs);
           }
         }
         if (sendTo.length > 0) {
@@ -876,9 +869,6 @@ exports.changeProjectStatus = async (req, res) => {
                 },
               },
             },
-            {
-              _id: { $ne: user.id },
-            },
           ],
         });
 
@@ -912,20 +902,19 @@ exports.changeProjectStatus = async (req, res) => {
               _id: eachProjectLeader,
             });
 
-            if (
-              eachProjectLeaderData &&
-              eachProjectLeaderData._id + "" !== "" + user.id
-            ) {
-              sendTo.push(eachProjectLeaderData._id);
-              if (eachProjectLeaderData.notification_subscription) {
-                const message = {
-                  notification: {
-                    title: "Project Status Changed",
-                    body: `Project ${docs.project_name} status changes from ${getProject.project_status} to ${docs.project_status} by ${user.name}`,
-                  },
-                  token: eachProjectLeaderData.notification_subscription,
-                };
-                await sendPushNotification(message);
+            if (eachProjectLeaderData) {
+              if (eachProjectLeaderData._id + "" !== "" + user.id) {
+                sendTo.push(eachProjectLeaderData._id);
+                if (eachProjectLeaderData.notification_subscription) {
+                  const message = {
+                    notification: {
+                      title: "Project Status Changed",
+                      body: `Project ${docs.project_name} status changes from ${getProject.project_status} to ${docs.project_status} by ${user.name}`,
+                    },
+                    token: eachProjectLeaderData.notification_subscription,
+                  };
+                  await sendPushNotification(message);
+                }
               }
               req.io
                 .to(eachProjectLeaderData._id)
@@ -959,17 +948,19 @@ exports.changeProjectStatus = async (req, res) => {
         }
         if (docs.created_by) {
           const creatorData = await User.findById(docs.created_by);
-          if (creatorData && creatorData._id + "" !== "" + user.id) {
-            sendTo.push(creatorData._id);
-            if (creatorData.notification_subscription) {
-              const message = {
-                notification: {
-                  title: "Project Status Changed",
-                  body: `Project ${docs.project_name} status changes from ${getProject.project_status} to ${docs.project_status} by ${user.name}`,
-                },
-                token: creatorData.notification_subscription,
-              };
-              await sendPushNotification(message);
+          if (creatorData) {
+            if (creatorData._id + "" !== "" + user.id) {
+              sendTo.push(creatorData._id);
+              if (creatorData.notification_subscription) {
+                const message = {
+                  notification: {
+                    title: "Project Status Changed",
+                    body: `Project ${docs.project_name} status changes from ${getProject.project_status} to ${docs.project_status} by ${user.name}`,
+                  },
+                  token: creatorData.notification_subscription,
+                };
+                await sendPushNotification(message);
+              }
             }
             req.io
               .to(creatorData._id)
@@ -1064,26 +1055,28 @@ exports.assignProject = async (req, res) => {
             _id: eachProjectAssignee,
           });
 
-          if (
-            eachProjectAssigneeData &&
-            eachProjectAssigneeData.notification_subscription
-          ) {
-            const message = {
-              notification: {
-                title: "Removed From Project",
-                body: `
-                You are removed from project "${project.project_name}" by ${user.name}`,
-              },
-              token: eachProjectAssigneeData.notification_subscription,
-            };
+          if (eachProjectAssigneeData) {
+            if (eachProjectAssigneeData.notification_subscription) {
+              const message = {
+                notification: {
+                  title: "Removed From Project",
+                  body: `You are removed from project "${project.project_name}" by ${user.name}`,
+                },
+                token: eachProjectAssigneeData.notification_subscription,
+              };
 
-            await sendPushNotification(message);
+              await sendPushNotification(message);
+            }
+
+            req.io
+              .to(eachProjectAssigneeData._id)
+              .emit("add_remove_project_assignee", "Success");
+
+            const assigneeMail = eachProjectAssigneeData.email;
+            const subjects = "Removed From Project";
+            const sendMsgs = `You are removed from project "${project.project_name}" by ${user.name}`;
+            sendMail(assigneeMail, subjects, sendMsgs);
           }
-
-          const assigneeMail = eachProjectAssigneeData.email;
-          const subjects = "Removed From Project";
-          const sendMsgs = `You are removed from project "${project.project_name}" by ${user.name}`;
-          sendMail(assigneeMail, subjects, sendMsgs);
         }
       } else {
         return res.status(500).send({
@@ -1092,7 +1085,6 @@ exports.assignProject = async (req, res) => {
         });
       }
     }
-
     if (project_assignee && project_assignee.length > 0) {
       const updateProject = await projectModel.updateMany(
         { _id: req.params.id },
@@ -1165,10 +1157,174 @@ exports.assignProject = async (req, res) => {
       });
     }
 
-    const updatedProject = await projectModel.findOne(
-      { _id: req.params.id },
-      { project_assignee: 1, _id: 1, project_name: 1 }
-    );
+    const updatedProject = await projectModel.findOne({ _id: req.params.id });
+
+    let sendTo = [];
+    const totalUserList = await User.find({
+      organisation_list: {
+        $elemMatch: {
+          organisation: user.organisation.organisation,
+          role: { $in: ["admin", "subadmin"] },
+        },
+      },
+    });
+
+    for (const eachProjectAssignee of updatedProject.project_assignee) {
+      const eachProjectAssigneeData = await User.findOne({
+        _id: eachProjectAssignee,
+      });
+
+      if (eachProjectAssigneeData) {
+        if (!project_assignee.includes(eachProjectAssigneeData._id)) {
+          sendTo.push(eachProjectAssigneeData._id);
+          if (eachProjectAssigneeData.notification_subscription) {
+            const message = {
+              notification: {
+                title: "Project Members Changed",
+                body: `Members of the project "${project.project_name}" changed by ${user.name}`,
+              },
+              token: eachProjectAssigneeData.notification_subscription,
+            };
+
+            await sendPushNotification(message);
+          }
+
+          req.io
+            .to(eachProjectAssigneeData._id)
+            .emit("add_remove_project_assignee", "Success");
+
+          const assigneeMail = eachProjectAssigneeData.email;
+          const subjects = "Project Members Changed";
+          const sendMsgs = `Members of the project "${project.project_name}" changed by ${user.name}`;
+          sendMail(assigneeMail, subjects, sendMsgs);
+        }
+      }
+    }
+    for (const eachProjectLeader of updatedProject.project_leader) {
+      const eachProjectLeaderData = await User.findOne({
+        _id: eachProjectLeader,
+      });
+
+      if (eachProjectLeaderData) {
+        if (eachProjectLeaderData._id + "" !== "" + user.id) {
+          sendTo.push(eachProjectLeaderData._id);
+          if (eachProjectLeaderData.notification_subscription) {
+            const message = {
+              notification: {
+                title: "Project Members Changed",
+                body: `Members of the project "${project.project_name}" changed by ${user.name}`,
+              },
+              token: eachProjectLeaderData.notification_subscription,
+            };
+
+            await sendPushNotification(message);
+          }
+
+          const assigneeMail = eachProjectLeaderData.email;
+          const subjects = "Project Members Changed";
+          const sendMsgs = `Members of the project "${project.project_name}" changed by ${user.name}`;
+          sendMail(assigneeMail, subjects, sendMsgs);
+        }
+        req.io
+          .to(eachProjectLeaderData._id)
+          .emit("add_remove_project_assignee", "Success");
+      }
+    }
+    if (updatedProject.project_client) {
+      const eachProjectClientData = await User.findOne({
+        _id: updatedProject.project_client,
+      });
+
+      if (eachProjectClientData) {
+        sendTo.push(eachProjectClientData._id);
+        if (eachProjectClientData.notification_subscription) {
+          const message = {
+            notification: {
+              title: "Project Members Changed",
+              body: `Members of the project "${project.project_name}" changed by ${user.name}`,
+            },
+            token: eachProjectClientData.notification_subscription,
+          };
+
+          await sendPushNotification(message);
+        }
+
+        req.io
+          .to(eachProjectClientData._id)
+          .emit("add_remove_project_assignee", "Success");
+
+        const assigneeMail = eachProjectClientData.email;
+        const subjects = "Project Members Changed";
+        const sendMsgs = `Members of the project "${project.project_name}" changed by ${user.name}`;
+        sendMail(assigneeMail, subjects, sendMsgs);
+      }
+    }
+    if (updatedProject.created_by) {
+      const creatorData = await User.findOne({
+        _id: updatedProject.created_by,
+      });
+
+      if (creatorData) {
+        if (creatorData._id + "" !== "" + user.id) {
+          sendTo.push(creatorData._id);
+          if (creatorData.notification_subscription) {
+            const message = {
+              notification: {
+                title: "Project Members Changed",
+                body: `Members of the project "${project.project_name}" changed by ${user.name}`,
+              },
+              token: creatorData.notification_subscription,
+            };
+
+            await sendPushNotification(message);
+          }
+
+          const assigneeMail = creatorData.email;
+          const subjects = "Project Members Changed";
+          const sendMsgs = `Members of the project "${project.project_name}" changed by ${user.name}`;
+          sendMail(assigneeMail, subjects, sendMsgs);
+        }
+        req.io
+          .to(creatorData._id)
+          .emit("add_remove_project_assignee", "Success");
+      }
+    }
+    if (totalUserList && totalUserList.length > 0) {
+      for (let singleUser of totalUserList) {
+        if (singleUser._id + "" !== "" + user.id) {
+          sendTo.push(singleUser._id);
+
+          if (singleUser.notification_subscription) {
+            const message = {
+              notification: {
+                title: "Project Members Changed",
+                body: `Members of the project "${project.project_name}" changed by ${user.name}`,
+              },
+              token: singleUser.notification_subscription,
+            };
+
+            await sendPushNotification(message);
+          }
+
+          const assigneeMail = singleUser.email;
+          const subjects = "Project Members Changed";
+          const sendMsgs = `Members of the project "${project.project_name}" changed by ${user.name}`;
+          sendMail(assigneeMail, subjects, sendMsgs);
+        }
+        req.io
+          .to(singleUser._id)
+          .emit("add_remove_project_assignee", "Success");
+      }
+    }
+    if (sendTo.length > 0) {
+      await Notification.create({
+        title: "Project Members Changed",
+        message: `Members of the project "${project.project_name}" changed by ${user.name}`,
+        status: "UNREAD",
+        send_by: user.id,
+        send_to: sendTo,
+      });
+    }
 
     let log = {
       date_time: new Date(),
@@ -1317,10 +1473,167 @@ exports.assignTeamLeader = async (req, res) => {
       });
     }
 
-    const updatedProject = await projectModel.findOne(
-      { _id: req.params.id },
-      { project_leader: 1, _id: 1, project_name: 1 }
-    );
+    const updatedProject = await projectModel.findOne({ _id: req.params.id });
+
+    let sendTo = [];
+    const totalUserList = await User.find({
+      organisation_list: {
+        $elemMatch: {
+          organisation: user.organisation.organisation,
+          role: { $in: ["admin", "subadmin"] },
+        },
+      },
+    });
+
+    for (const eachProjectAssignee of updatedProject.project_assignee) {
+      const eachProjectAssigneeData = await User.findOne({
+        _id: eachProjectAssignee,
+      });
+
+      if (eachProjectAssigneeData) {
+        sendTo.push(eachProjectAssigneeData._id);
+        if (eachProjectAssigneeData.notification_subscription) {
+          const message = {
+            notification: {
+              title: "Project Leader Updated",
+              body: `Leader of the project "${project.project_name}" changed by ${user.name}`,
+            },
+            token: eachProjectAssigneeData.notification_subscription,
+          };
+
+          await sendPushNotification(message);
+        }
+
+        req.io
+          .to(eachProjectAssigneeData._id)
+          .emit("add_remove_project_leader", "Success");
+
+        const assigneeMail = eachProjectAssigneeData.email;
+        const subjects = "Project Leader Updated";
+        const sendMsgs = `Leader of the project "${project.project_name}" changed by ${user.name}`;
+        sendMail(assigneeMail, subjects, sendMsgs);
+      }
+    }
+    for (const eachProjectLeader of updatedProject.project_leader) {
+      const eachProjectLeaderData = await User.findOne({
+        _id: eachProjectLeader,
+      });
+
+      if (eachProjectLeaderData) {
+        if (!project_leader.includes(eachProjectLeaderData._id)) {
+          sendTo.push(eachProjectLeaderData._id);
+          if (eachProjectLeaderData.notification_subscription) {
+            const message = {
+              notification: {
+                title: "Project Leader Updated",
+                body: `Leader of the project "${project.project_name}" changed by ${user.name}`,
+              },
+              token: eachProjectLeaderData.notification_subscription,
+            };
+
+            await sendPushNotification(message);
+          }
+
+          const assigneeMail = eachProjectLeaderData.email;
+          const subjects = "Project Leader Updated";
+          const sendMsgs = `Leader of the project "${project.project_name}" changed by ${user.name}`;
+          sendMail(assigneeMail, subjects, sendMsgs);
+        }
+        req.io
+          .to(eachProjectLeaderData._id)
+          .emit("add_remove_project_leader", "Success");
+      }
+    }
+    if (updatedProject.project_client) {
+      const eachProjectClientData = await User.findOne({
+        _id: updatedProject.project_client,
+      });
+
+      if (eachProjectClientData) {
+        sendTo.push(eachProjectClientData._id);
+        if (eachProjectClientData.notification_subscription) {
+          const message = {
+            notification: {
+              title: "Project Leader Updated",
+              body: `Leader of the project "${project.project_name}" changed by ${user.name}`,
+            },
+            token: eachProjectClientData.notification_subscription,
+          };
+
+          await sendPushNotification(message);
+        }
+
+        req.io
+          .to(eachProjectClientData._id)
+          .emit("add_remove_project_leader", "Success");
+
+        const assigneeMail = eachProjectClientData.email;
+        const subjects = "Project Leader Updated";
+        const sendMsgs = `Leader of the project "${project.project_name}" changed by ${user.name}`;
+        sendMail(assigneeMail, subjects, sendMsgs);
+      }
+    }
+    if (updatedProject.created_by) {
+      const creatorData = await User.findOne({
+        _id: updatedProject.created_by,
+      });
+      if (creatorData) {
+        if (creatorData._id + "" !== "" + user.id) {
+          sendTo.push(creatorData._id);
+          if (creatorData.notification_subscription) {
+            const message = {
+              notification: {
+                title: "Project Leader Updated",
+                body: `Leader of the project "${project.project_name}" changed by ${user.name}`,
+              },
+              token: creatorData.notification_subscription,
+            };
+
+            await sendPushNotification(message);
+          }
+
+          const assigneeMail = creatorData.email;
+          const subjects = "Project Leader Updated";
+          const sendMsgs = `Leader of the project "${project.project_name}" changed by ${user.name}`;
+          sendMail(assigneeMail, subjects, sendMsgs);
+        }
+        req.io.to(creatorData._id).emit("add_remove_project_leader", "Success");
+      }
+    }
+    if (totalUserList && totalUserList.length > 0) {
+      for (let singleUser of totalUserList) {
+        if (singleUser._id + "" !== "" + user.id) {
+          sendTo.push(singleUser._id);
+
+          if (singleUser.notification_subscription) {
+            const message = {
+              notification: {
+                title: "Project Leader Updated",
+                body: `Leader of the project "${project.project_name}" changed by ${user.name}`,
+              },
+              token: singleUser.notification_subscription,
+            };
+
+            await sendPushNotification(message);
+          }
+
+          const assigneeMail = singleUser.email;
+          const subjects = "Project Leader Updated";
+          const sendMsgs = `Leader of the project "${project.project_name}" changed by ${user.name}`;
+          sendMail(assigneeMail, subjects, sendMsgs);
+        }
+        req.io.to(singleUser._id).emit("add_remove_project_leader", "Success");
+      }
+    }
+    if (sendTo.length > 0) {
+      await Notification.create({
+        title: "Project Leader Updated",
+        message: `Leader of the project "${project.project_name}" changed by ${user.name}`,
+        status: "UNREAD",
+        send_by: user.id,
+        send_to: sendTo,
+      });
+    }
 
     let log = {
       date_time: new Date(),
@@ -1427,25 +1740,24 @@ exports.addProjectAttachment = async (req, res) => {
                   },
                 },
               },
-              {
-                _id: { $ne: user.id },
-              },
             ],
           });
 
           docs.project_assignee.map(async (assignee_id) => {
             const assigneeData = await User.findById(assignee_id);
-            if (assigneeData && assigneeData._id + "" !== "" + user.id) {
-              sendTo.push(assigneeData._id);
-              if (assigneeData.notification_subscription) {
-                const message = {
-                  notification: {
-                    title: "New Project Attachment Added",
-                    body: `New Attachment added on Project ${docs.project_name} by ${user.name}`,
-                  },
-                  token: assigneeData.notification_subscription,
-                };
-                await sendPushNotification(message);
+            if (assigneeData) {
+              if (assigneeData._id + "" !== "" + user.id) {
+                sendTo.push(assigneeData._id);
+                if (assigneeData.notification_subscription) {
+                  const message = {
+                    notification: {
+                      title: "New Project Attachment Added",
+                      body: `New Attachment added on Project ${docs.project_name} by ${user.name}`,
+                    },
+                    token: assigneeData.notification_subscription,
+                  };
+                  await sendPushNotification(message);
+                }
               }
               req.io
                 .to(assigneeData._id)
@@ -1454,17 +1766,19 @@ exports.addProjectAttachment = async (req, res) => {
           });
           docs.project_leader.map(async (leader_id) => {
             const leaderData = await User.findById(leader_id);
-            if (leaderData && leaderData._id + "" !== "" + user.id) {
-              sendTo.push(leaderData._id);
-              if (leaderData.notification_subscription) {
-                const message = {
-                  notification: {
-                    title: "New Project Attachment Added",
-                    body: `New Attachment added on Project ${docs.project_name} by ${user.name}`,
-                  },
-                  token: leaderData.notification_subscription,
-                };
-                await sendPushNotification(message);
+            if (leaderData) {
+              if (leaderData._id + "" !== "" + user.id) {
+                sendTo.push(leaderData._id);
+                if (leaderData.notification_subscription) {
+                  const message = {
+                    notification: {
+                      title: "New Project Attachment Added",
+                      body: `New Attachment added on Project ${docs.project_name} by ${user.name}`,
+                    },
+                    token: leaderData.notification_subscription,
+                  };
+                  await sendPushNotification(message);
+                }
               }
               req.io
                 .to(leaderData._id)
@@ -1472,34 +1786,38 @@ exports.addProjectAttachment = async (req, res) => {
             }
           });
           const clientData = await User.findById(docs.project_client);
-          if (clientData && clientData._id + "" !== "" + user.id) {
-            if (clientData.notification_subscription) {
-              sendTo.push(clientData._id);
-              const message = {
-                notification: {
-                  title: "New Project Attachment Added",
-                  body: `New Attachment added on Project ${docs.project_name} by ${user.name}`,
-                },
-                token: clientData.notification_subscription,
-              };
-              await sendPushNotification(message);
+          if (clientData) {
+            if (clientData._id + "" !== "" + user.id) {
+              if (clientData.notification_subscription) {
+                sendTo.push(clientData._id);
+                const message = {
+                  notification: {
+                    title: "New Project Attachment Added",
+                    body: `New Attachment added on Project ${docs.project_name} by ${user.name}`,
+                  },
+                  token: clientData.notification_subscription,
+                };
+                await sendPushNotification(message);
+              }
             }
             req.io
               .to(clientData._id)
               .emit("project_attachment_added", "Success");
           }
           const creatorData = await User.findById(docs.created_by);
-          if (creatorData && creatorData._id + "" !== "" + user.id) {
-            sendTo.push(creatorData._id);
-            if (creatorData.notification_subscription) {
-              const message = {
-                notification: {
-                  title: "New Project Attachment Added",
-                  body: `New Attachment added on Project ${docs.project_name} by ${user.name}`,
-                },
-                token: creatorData.notification_subscription,
-              };
-              await sendPushNotification(message);
+          if (creatorData) {
+            if (creatorData._id + "" !== "" + user.id) {
+              sendTo.push(creatorData._id);
+              if (creatorData.notification_subscription) {
+                const message = {
+                  notification: {
+                    title: "New Project Attachment Added",
+                    body: `New Attachment added on Project ${docs.project_name} by ${user.name}`,
+                  },
+                  token: creatorData.notification_subscription,
+                };
+                await sendPushNotification(message);
+              }
             }
             req.io
               .to(creatorData._id)
@@ -1507,18 +1825,19 @@ exports.addProjectAttachment = async (req, res) => {
           }
           if (totalUserList && totalUserList.length > 0) {
             for (let singleUser of totalUserList) {
-              sendTo.push(singleUser._id);
-              if (singleUser.notification_subscription) {
-                const message = {
-                  notification: {
-                    title: "New Project Attachment Added",
-                    body: `New Attachment added on Project ${docs.project_name} by ${user.name}`,
-                  },
-                  token: singleUser.notification_subscription,
-                };
-                await sendPushNotification(message);
+              if (singleUser._id + "" !== "" + user.id) {
+                sendTo.push(singleUser._id);
+                if (singleUser.notification_subscription) {
+                  const message = {
+                    notification: {
+                      title: "New Project Attachment Added",
+                      body: `New Attachment added on Project ${docs.project_name} by ${user.name}`,
+                    },
+                    token: singleUser.notification_subscription,
+                  };
+                  await sendPushNotification(message);
+                }
               }
-
               req.io
                 .to(singleUser._id)
                 .emit("project_attachment_added", "Success");
@@ -1624,25 +1943,24 @@ exports.deleteProjectAttachment = async (req, res) => {
                   },
                 },
               },
-              {
-                _id: { $ne: user.id },
-              },
             ],
           });
 
           docs.project_assignee.map(async (assignee_id) => {
             const assigneeData = await User.findById(assignee_id);
-            if (assigneeData && assigneeData._id + "" !== "" + user.id) {
-              sendTo.push(assigneeData._id);
-              if (assigneeData.notification_subscription) {
-                const message = {
-                  notification: {
-                    title: "One Attachment Deleted",
-                    body: `One Attachment deleted from Project ${docs.project_name} by ${user.name}`,
-                  },
-                  token: assigneeData.notification_subscription,
-                };
-                await sendPushNotification(message);
+            if (assigneeData) {
+              if (assigneeData._id + "" !== "" + user.id) {
+                sendTo.push(assigneeData._id);
+                if (assigneeData.notification_subscription) {
+                  const message = {
+                    notification: {
+                      title: "One Attachment Deleted",
+                      body: `One Attachment deleted from Project ${docs.project_name} by ${user.name}`,
+                    },
+                    token: assigneeData.notification_subscription,
+                  };
+                  await sendPushNotification(message);
+                }
               }
               req.io
                 .to(assigneeData._id)
@@ -1651,17 +1969,19 @@ exports.deleteProjectAttachment = async (req, res) => {
           });
           docs.project_leader.map(async (leader_id) => {
             const leaderData = await User.findById(leader_id);
-            if (leaderData && leaderData._id + "" !== "" + user.id) {
-              sendTo.push(leaderData._id);
-              if (leaderData.notification_subscription) {
-                const message = {
-                  notification: {
-                    title: "One Attachment Deleted",
-                    body: `One Attachment deleted from Project ${docs.project_name} by ${user.name}`,
-                  },
-                  token: leaderData.notification_subscription,
-                };
-                await sendPushNotification(message);
+            if (leaderData) {
+              if (leaderData._id + "" !== "" + user.id) {
+                sendTo.push(leaderData._id);
+                if (leaderData.notification_subscription) {
+                  const message = {
+                    notification: {
+                      title: "One Attachment Deleted",
+                      body: `One Attachment deleted from Project ${docs.project_name} by ${user.name}`,
+                    },
+                    token: leaderData.notification_subscription,
+                  };
+                  await sendPushNotification(message);
+                }
               }
               req.io
                 .to(leaderData._id)
@@ -1669,34 +1989,38 @@ exports.deleteProjectAttachment = async (req, res) => {
             }
           });
           const clientData = await User.findById(docs.project_client);
-          if (clientData && clientData._id + "" !== "" + user.id) {
-            if (clientData.notification_subscription) {
+          if (clientData) {
+            if (clientData._id + "" !== "" + user.id) {
               sendTo.push(clientData._id);
-              const message = {
-                notification: {
-                  title: "One Attachment Deleted",
-                  body: `One Attachment deleted from Project ${docs.project_name} by ${user.name}`,
-                },
-                token: clientData.notification_subscription,
-              };
-              await sendPushNotification(message);
+              if (clientData.notification_subscription) {
+                const message = {
+                  notification: {
+                    title: "One Attachment Deleted",
+                    body: `One Attachment deleted from Project ${docs.project_name} by ${user.name}`,
+                  },
+                  token: clientData.notification_subscription,
+                };
+                await sendPushNotification(message);
+              }
             }
             req.io
               .to(clientData._id)
               .emit("project_attachment_deleted", "Success");
           }
           const creatorData = await User.findById(docs.created_by);
-          if (creatorData && creatorData._id + "" !== "" + user.id) {
-            sendTo.push(creatorData._id);
-            if (creatorData.notification_subscription) {
-              const message = {
-                notification: {
-                  title: "One Attachment Deleted",
-                  body: `One Attachment deleted from Project ${docs.project_name} by ${user.name}`,
-                },
-                token: creatorData.notification_subscription,
-              };
-              await sendPushNotification(message);
+          if (creatorData) {
+            if (creatorData._id + "" !== "" + user.id) {
+              sendTo.push(creatorData._id);
+              if (creatorData.notification_subscription) {
+                const message = {
+                  notification: {
+                    title: "One Attachment Deleted",
+                    body: `One Attachment deleted from Project ${docs.project_name} by ${user.name}`,
+                  },
+                  token: creatorData.notification_subscription,
+                };
+                await sendPushNotification(message);
+              }
             }
             req.io
               .to(creatorData._id)
@@ -1704,16 +2028,18 @@ exports.deleteProjectAttachment = async (req, res) => {
           }
           if (totalUserList && totalUserList.length > 0) {
             for (let singleUser of totalUserList) {
-              sendTo.push(singleUser._id);
-              if (singleUser.notification_subscription) {
-                const message = {
-                  notification: {
-                    title: "One Attachment Deleted",
-                    body: `One Attachment deleted from Project ${docs.project_name} by ${user.name}`,
-                  },
-                  token: singleUser.notification_subscription,
-                };
-                await sendPushNotification(message);
+              if (singleUser._id + "" !== "" + user.id) {
+                sendTo.push(singleUser._id);
+                if (singleUser.notification_subscription) {
+                  const message = {
+                    notification: {
+                      title: "One Attachment Deleted",
+                      body: `One Attachment deleted from Project ${docs.project_name} by ${user.name}`,
+                    },
+                    token: singleUser.notification_subscription,
+                  };
+                  await sendPushNotification(message);
+                }
               }
               req.io
                 .to(singleUser._id)

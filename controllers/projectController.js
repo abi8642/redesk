@@ -892,9 +892,9 @@ exports.changeProjectStatus = async (req, res) => {
                 await sendPushNotification(message);
               }
 
-              // req.io
-              //   .to(eachProjectAssigneeData._id)
-              //   .emit("project_status_changed", "Success");
+              req.io
+                .to(eachProjectAssigneeData._id)
+                .emit("project_status_changed", "Success");
             }
           }
         }
@@ -918,9 +918,9 @@ exports.changeProjectStatus = async (req, res) => {
                   await sendPushNotification(message);
                 }
               }
-              // req.io
-              //   .to(eachProjectLeaderData._id)
-              //   .emit("project_status_changed", "Success");
+              req.io
+                .to(eachProjectLeaderData._id)
+                .emit("project_status_changed", "Success");
             }
           }
         }
@@ -943,9 +943,9 @@ exports.changeProjectStatus = async (req, res) => {
               await sendPushNotification(message);
             }
 
-            // req.io
-            //   .to(eachProjectClientData._id)
-            //   .emit("project_status_changed", "Success");
+            req.io
+              .to(eachProjectClientData._id)
+              .emit("project_status_changed", "Success");
           }
         }
         if (docs.created_by) {
@@ -964,9 +964,9 @@ exports.changeProjectStatus = async (req, res) => {
                 await sendPushNotification(message);
               }
             }
-            // req.io
-            //   .to(creatorData._id)
-            //   .emit("project_status_changed", "Success");
+            req.io
+              .to(creatorData._id)
+              .emit("project_status_changed", "Success");
           }
         }
         if (totalUserList && totalUserList.length > 0) {
@@ -982,7 +982,7 @@ exports.changeProjectStatus = async (req, res) => {
               };
               await sendPushNotification(message);
             }
-            // req.io.to(singleUser._id).emit("project_status_changed", "Success");
+            req.io.to(singleUser._id).emit("project_status_changed", "Success");
           }
         }
         if (sendTo.length > 0) {
@@ -994,7 +994,7 @@ exports.changeProjectStatus = async (req, res) => {
             send_to: sendTo,
           });
         }
-        req.io.emit("project_status_changed", "Success");
+        // req.io.emit("project_status_changed", "Success");
 
         return res.status(200).send({
           status: "200",

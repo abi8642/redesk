@@ -56,7 +56,7 @@ const {
 } = require("../controllers/taskController");
 const {
   createProject,
-  getProject,
+  getProjectListForLoginUser,
   editProject,
   getProjectById,
   getTaskCountByProject,
@@ -255,7 +255,7 @@ router.post(
   requiredAuth(),
   deleteProjectAttachment
 );
-router.get("/projectList", requiredAuth(), getProject);
+router.get("/projectList", requiredAuth(), getProjectListForLoginUser);
 router.put(
   "/projectEdit/:id",
   requiredAuth(["admin", "subadmin", "team_leader"]),

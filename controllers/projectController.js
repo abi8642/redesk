@@ -241,7 +241,7 @@ exports.createProject = async (req, res) => {
   }
 };
 
-exports.getProjectMembers = (req, res) => {
+exports.getProjectMembers = async (req, res) => {
   try {
     const user = req.user;
     const projectId = { _id: req.params.id };
@@ -252,35 +252,40 @@ exports.getProjectMembers = (req, res) => {
         message: "Project Id is required",
       });
     }
-    projectModel
-      .findOne({
-        _id: req.params.id,
-        organisation: user.organisation.organisation,
-      })
-      .populate("project_leader project_assignee", "name pic email")
-      .then(async (docs) => {
-        if (docs.length == 0) {
-          //get Task Details
-          return res.status(400).send({
-            status: "400",
-            message: "No project found",
-          });
-        }
-        let members = [];
-        members.push(...docs.project_leader);
-        members.push(...docs.project_assignee);
 
-        return res
-          .status(200)
-          .send({ status: "200", message: "Project Member List", members });
-      })
-      .catch((err) => {
-        return res.status(500).send({
-          status: "500",
-          message:
-            "Failed to retrieve the Project Member List. Try again later",
-        });
+    const condition = {
+      $and: [
+        projectId,
+        { organisation: user.organisation.organisation },
+        {
+          $or: [
+            { project_assignee: user.id },
+            { project_leader: user.id },
+            { project_client: user.id },
+            { created_by: user.id },
+          ],
+        },
+      ],
+    };
+
+    const projectData = await projectModel
+      .findOne(condition)
+      .populate("project_leader project_assignee", "name pic email");
+
+    if (!projectData) {
+      return res.status(500).send({
+        status: "500",
+        message: "Failed to retrieve the Project List. Try again later",
       });
+    }
+
+    let members = [];
+    members.push(...docs.project_leader);
+    members.push(...docs.project_assignee);
+
+    return res
+      .status(200)
+      .send({ status: "200", message: "Project Member List", members });
   } catch (err) {
     return res.status(500).send({
       status: "500",
@@ -289,7 +294,7 @@ exports.getProjectMembers = (req, res) => {
   }
 };
 
-exports.getProject = (req, res) => {
+exports.getProjectListForLoginUser = (req, res) => {
   try {
     const user = req.user;
     let query = {};
@@ -342,36 +347,43 @@ exports.getProjectById = async (req, res) => {
     const user = req.user;
     const projectId = { _id: req.params.id };
 
-    projectModel
-      .findOne(projectId)
-      .populate("project_leader project_assignee", "_id name pic")
-      .then(async (docs) => {
-        if (docs.length == 0) {
-          //get Task Details
-          return res.status(400).send({
-            status: "400",
-            message: "No project found",
-          });
-        }
-        const projectDetails = {
-          project: docs,
-        };
-        const tasks = await taskModel
-          .find({ project_id: req.params.id })
-          .populate("task_assignee", "_id name pic");
-        projectDetails.taskList = tasks;
+    const condition = {
+      $and: [
+        projectId,
+        { organisation: user.organisation.organisation },
+        {
+          $or: [
+            { project_assignee: user.id },
+            { project_leader: user.id },
+            { project_client: user.id },
+            { created_by: user.id },
+          ],
+        },
+      ],
+    };
 
-        return res
-          .status(200)
-          .send({ status: "200", message: "Project Details", projectDetails });
-      })
-      .catch((err) => {
-        return res.status(500).send({
-          status: "500",
-          message:
-            "Failed to retrieve the Project details. Try again later" + err,
-        });
+    const projectData = await projectModel
+      .findOne(condition)
+      .populate("project_leader project_assignee", "_id name pic");
+
+    if (!projectData) {
+      return res.status(403).send({
+        status: "403",
+        message: "You are not allowed to access the project",
       });
+    }
+
+    const projectDetails = {
+      project: docs,
+    };
+    const tasks = await taskModel
+      .find({ project_id: req.params.id })
+      .populate("task_assignee", "_id name pic");
+    projectDetails.taskList = tasks;
+
+    return res
+      .status(200)
+      .send({ status: "200", message: "Project Details", projectDetails });
   } catch (err) {
     return res.status(500).send({
       status: "500",
@@ -380,53 +392,79 @@ exports.getProjectById = async (req, res) => {
   }
 };
 
-exports.getTaskCountByProject = (req, res) => {
+exports.getTaskCountByProject = async (req, res) => {
   try {
+    const user = req.user;
     const projectId = { project_id: req.params.id };
-    taskModel.find(projectId, "task_status", (err, docs) => {
-      if (!err) {
-        let obj = {
-          active: 0,
-          in_progress: 0,
-          qa: 0,
-          completed: 0,
-          backlogs: 0,
-          confirmed: 0,
-        };
-        for (var i = 0; i < docs.length; i++) {
-          switch (docs[i].task_status + "") {
-            case "1":
-              obj.active = obj.active + 1;
-              break;
-            case "2":
-              obj.in_progress = obj.in_progress + 1;
-              break;
-            case "3":
-              obj.qa = obj.qa + 1;
-              break;
-            case "4":
-              obj.completed = obj.completed + 1;
-              break;
-            case "5":
-              obj.backlogs = obj.backlogs + 1;
-              break;
-            case "5":
-              obj.confirmed = obj.confirmed + 1;
-              break;
-          }
-          // obj[docs[i].task_status] = obj[docs[i].task_status] + 1;
-        }
 
-        return res
-          .status(200)
-          .send({ status: "200", message: "Task Count", taskCount: obj });
-      } else {
-        return res.status(500).send({
-          status: "500",
-          message: "Failed to retrieve data. Try again later",
-        });
-      }
-    });
+    const condition = {
+      $and: [
+        projectId,
+        { organisation: user.organisation.organisation },
+        {
+          $or: [
+            { project_assignee: user.id },
+            { project_leader: user.id },
+            { project_client: user.id },
+            { created_by: user.id },
+          ],
+        },
+      ],
+    };
+
+    const projectData = await projectModel.findOne(condition);
+
+    if (projectData) {
+      taskModel.find(projectId, "task_status", (err, docs) => {
+        if (!err) {
+          let obj = {
+            active: 0,
+            in_progress: 0,
+            qa: 0,
+            completed: 0,
+            backlogs: 0,
+            confirmed: 0,
+          };
+          for (var i = 0; i < docs.length; i++) {
+            switch (docs[i].task_status + "") {
+              case "1":
+                obj.active = obj.active + 1;
+                break;
+              case "2":
+                obj.in_progress = obj.in_progress + 1;
+                break;
+              case "3":
+                obj.qa = obj.qa + 1;
+                break;
+              case "4":
+                obj.completed = obj.completed + 1;
+                break;
+              case "5":
+                obj.backlogs = obj.backlogs + 1;
+                break;
+              case "5":
+                obj.confirmed = obj.confirmed + 1;
+                break;
+            }
+            // obj[docs[i].task_status] = obj[docs[i].task_status] + 1;
+          }
+
+          return res
+            .status(200)
+            .send({ status: "200", message: "Task Count", taskCount: obj });
+        } else {
+          return res.status(500).send({
+            status: "500",
+            message: "Failed to retrieve data. Try again later",
+          });
+        }
+      });
+    } else {
+      return res.status(403).send({
+        status: "403",
+        message: "You are not allowed to access the project",
+      });
+    }
   } catch (err) {
     return res.status(500).send({
       status: "500",
@@ -435,10 +473,11 @@ exports.getTaskCountByProject = (req, res) => {
   }
 };
 
-exports.getTaskByStatus = (req, res) => {
+exports.getTaskByStatus = async (req, res) => {
   try {
     const projectId = req.query.project_id;
     const taskStatus = req.query.task_status;
+    const user = req.user;
 
     let blankFields = [];
 
@@ -454,9 +493,31 @@ exports.getTaskByStatus = (req, res) => {
         message: `${blankFields} is required`,
       });
     }
-    const condition = { project_id: projectId, task_status: taskStatus };
+    const projectCondition = {
+      $and: [
+        { _id: projectId },
+        { organisation: user.organisation.organisation },
+        {
+          $or: [
+            { project_assignee: user.id },
+            { project_leader: user.id },
+            { project_client: user.id },
+            { created_by: user.id },
+          ],
+        },
+      ],
+    };
 
-    taskModel.find(condition, (err, docs) => {
+    const projectData = await projectModel.findOne(projectCondition);
+    const taskCondition = { project_id: projectId, task_status: taskStatus };
+
+    if (!projectData) {
+      return res.status(403).send({
+        status: "403",
+        message: "You are not allowed to access the project",
+      });
+    }
+    taskModel.find(taskCondition, (err, docs) => {
       if (!err) {
         return res
           .status(200)
@@ -892,9 +953,9 @@ exports.changeProjectStatus = async (req, res) => {
                 await sendPushNotification(message);
               }
 
-              req.io
-                .to(eachProjectAssigneeData._id)
-                .emit("project_status_changed", "Success");
+              // req.io
+              //   .to(eachProjectAssigneeData._id)
+              //   .emit("project_status_changed", "Success");
             }
           }
         }
@@ -918,9 +979,9 @@ exports.changeProjectStatus = async (req, res) => {
                   await sendPushNotification(message);
                 }
               }
-              req.io
-                .to(eachProjectLeaderData._id)
-                .emit("project_status_changed", "Success");
+              // req.io
+              //   .to(eachProjectLeaderData._id)
+              //   .emit("project_status_changed", "Success");
             }
           }
         }
@@ -943,9 +1004,9 @@ exports.changeProjectStatus = async (req, res) => {
               await sendPushNotification(message);
             }
 
-            req.io
-              .to(eachProjectClientData._id)
-              .emit("project_status_changed", "Success");
+            // req.io
+            //   .to(eachProjectClientData._id)
+            //   .emit("project_status_changed", "Success");
           }
         }
         if (docs.created_by) {
@@ -964,9 +1025,9 @@ exports.changeProjectStatus = async (req, res) => {
                 await sendPushNotification(message);
               }
             }
-            req.io
-              .to(creatorData._id)
-              .emit("project_status_changed", "Success");
+            // req.io
+            //   .to(creatorData._id)
+            //   .emit("project_status_changed", "Success");
           }
         }
         if (totalUserList && totalUserList.length > 0) {
@@ -982,7 +1043,7 @@ exports.changeProjectStatus = async (req, res) => {
               };
               await sendPushNotification(message);
             }
-            req.io.to(singleUser._id).emit("project_status_changed", "Success");
+            // req.io.to(singleUser._id).emit("project_status_changed", "Success");
           }
         }
         if (sendTo.length > 0) {
@@ -994,7 +1055,7 @@ exports.changeProjectStatus = async (req, res) => {
             send_to: sendTo,
           });
         }
-        // req.io.emit("project_status_changed", "Success");
+        req.io.emit("project_status_changed", "Success");
 
         return res.status(200).send({
           status: "200",

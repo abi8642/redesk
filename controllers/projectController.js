@@ -86,9 +86,9 @@ exports.createProject = async (req, res) => {
                 await sendPushNotification(message);
               }
 
-              req.io
-                .to(eachProjectAssigneeData._id)
-                .emit("project_created", "Success");
+              // req.io
+              //   .to(eachProjectAssigneeData._id)
+              //   .emit("project_created", "Success");
 
               const assigneeMail = eachProjectAssigneeData.email;
               const subjects = "You are assign on a project";
@@ -132,9 +132,9 @@ exports.createProject = async (req, res) => {
                   `;
                 sendMail(assigneeMail, subjects, sendMsgs);
               }
-              req.io
-                .to(eachProjectLeaderData._id)
-                .emit("project_created", "Success");
+              // req.io
+              //   .to(eachProjectLeaderData._id)
+              //   .emit("project_created", "Success");
             }
           }
         }
@@ -157,9 +157,9 @@ exports.createProject = async (req, res) => {
               await sendPushNotification(message);
             }
 
-            req.io
-              .to(eachProjectClientData._id)
-              .emit("project_created", "Success");
+            // req.io
+            //   .to(eachProjectClientData._id)
+            //   .emit("project_created", "Success");
 
             const assigneeMail = eachProjectClientData.email;
             const subjects = "New Project Assigned";
@@ -199,7 +199,7 @@ exports.createProject = async (req, res) => {
                 Project_created_by: <b>${user.name}</b>`;
               sendMail(assigneeMail, subjects, sendMsgs);
             }
-            req.io.to(singleUser._id).emit("project_created", "Success");
+            // req.io.to(singleUser._id).emit("project_created", "Success");
           }
         }
         if (sendTo.length > 0) {
@@ -221,6 +221,7 @@ exports.createProject = async (req, res) => {
           });
         }
 
+        req.io.emit("project_created", "Success");
         if (project) {
           return res
             .status(200)
@@ -625,9 +626,9 @@ exports.editProject = async (req, res) => {
                 };
                 await sendPushNotification(message);
               }
-              req.io
-                .to(eachProjectAssigneeData._id)
-                .emit("project_updated", "Success");
+              // req.io
+              //   .to(eachProjectAssigneeData._id)
+              //   .emit("project_updated", "Success");
 
               const assigneeMail = eachProjectAssigneeData.email;
               const subjects = "Project Updated";
@@ -672,9 +673,9 @@ exports.editProject = async (req, res) => {
                   `;
                 sendMail(assigneeMail, subjects, sendMsgs);
               }
-              req.io
-                .to(eachProjectLeaderData._id)
-                .emit("project_updated", "Success");
+              // req.io
+              //   .to(eachProjectLeaderData._id)
+              //   .emit("project_updated", "Success");
             }
           }
         }
@@ -697,9 +698,9 @@ exports.editProject = async (req, res) => {
               await sendPushNotification(message);
             }
 
-            req.io
-              .to(eachProjectClientData._id)
-              .emit("project_updated", "Success");
+            // req.io
+            //   .to(eachProjectClientData._id)
+            //   .emit("project_updated", "Success");
 
             const assigneeMail = eachProjectClientData.email;
             const subjects = "Project Updated";
@@ -728,7 +729,7 @@ exports.editProject = async (req, res) => {
                 await sendPushNotification(message);
               }
             }
-            req.io.to(creatorData._id).emit("project_updated", "Success");
+            // req.io.to(creatorData._id).emit("project_updated", "Success");
           }
         }
         if (totalUserList && totalUserList.length > 0) {
@@ -755,7 +756,7 @@ exports.editProject = async (req, res) => {
               Project_created_by: <b>${user.name}</b>`;
               sendMail(assigneeMail, subjects, sendMsgs);
             }
-            req.io.to(singleUser._id).emit("project_updated", "Success");
+            // req.io.to(singleUser._id).emit("project_updated", "Success");
           }
         }
         if (sendTo.length > 0) {
@@ -767,6 +768,7 @@ exports.editProject = async (req, res) => {
             send_to: sendTo,
           });
         }
+        req.io.emit("project_updated", "Success");
 
         return res.status(200).send({
           status: "200",
@@ -890,9 +892,9 @@ exports.changeProjectStatus = async (req, res) => {
                 await sendPushNotification(message);
               }
 
-              req.io
-                .to(eachProjectAssigneeData._id)
-                .emit("project_status_changed", "Success");
+              // req.io
+              //   .to(eachProjectAssigneeData._id)
+              //   .emit("project_status_changed", "Success");
             }
           }
         }
@@ -916,9 +918,9 @@ exports.changeProjectStatus = async (req, res) => {
                   await sendPushNotification(message);
                 }
               }
-              req.io
-                .to(eachProjectLeaderData._id)
-                .emit("project_status_changed", "Success");
+              // req.io
+              //   .to(eachProjectLeaderData._id)
+              //   .emit("project_status_changed", "Success");
             }
           }
         }
@@ -941,9 +943,9 @@ exports.changeProjectStatus = async (req, res) => {
               await sendPushNotification(message);
             }
 
-            req.io
-              .to(eachProjectClientData._id)
-              .emit("project_status_changed", "Success");
+            // req.io
+            //   .to(eachProjectClientData._id)
+            //   .emit("project_status_changed", "Success");
           }
         }
         if (docs.created_by) {
@@ -962,9 +964,9 @@ exports.changeProjectStatus = async (req, res) => {
                 await sendPushNotification(message);
               }
             }
-            req.io
-              .to(creatorData._id)
-              .emit("project_status_changed", "Success");
+            // req.io
+            //   .to(creatorData._id)
+            //   .emit("project_status_changed", "Success");
           }
         }
         if (totalUserList && totalUserList.length > 0) {
@@ -980,7 +982,7 @@ exports.changeProjectStatus = async (req, res) => {
               };
               await sendPushNotification(message);
             }
-            req.io.to(singleUser._id).emit("project_status_changed", "Success");
+            // req.io.to(singleUser._id).emit("project_status_changed", "Success");
           }
         }
         if (sendTo.length > 0) {
@@ -992,6 +994,7 @@ exports.changeProjectStatus = async (req, res) => {
             send_to: sendTo,
           });
         }
+        req.io.emit("project_status_changed", "Success");
 
         return res.status(200).send({
           status: "200",
@@ -1189,9 +1192,9 @@ exports.assignProject = async (req, res) => {
             await sendPushNotification(message);
           }
 
-          req.io
-            .to(eachProjectAssigneeData._id)
-            .emit("add_remove_project_assignee", "Success");
+          // req.io
+          //   .to(eachProjectAssigneeData._id)
+          //   .emit("add_remove_project_assignee", "Success");
 
           const assigneeMail = eachProjectAssigneeData.email;
           const subjects = "Project Members Changed";
@@ -1225,9 +1228,9 @@ exports.assignProject = async (req, res) => {
           const sendMsgs = `Members of the project "${project.project_name}" changed by ${user.name}`;
           sendMail(assigneeMail, subjects, sendMsgs);
         }
-        req.io
-          .to(eachProjectLeaderData._id)
-          .emit("add_remove_project_assignee", "Success");
+        // req.io
+        //   .to(eachProjectLeaderData._id)
+        //   .emit("add_remove_project_assignee", "Success");
       }
     }
     if (updatedProject.project_client) {
@@ -1249,9 +1252,9 @@ exports.assignProject = async (req, res) => {
           await sendPushNotification(message);
         }
 
-        req.io
-          .to(eachProjectClientData._id)
-          .emit("add_remove_project_assignee", "Success");
+        // req.io
+        //   .to(eachProjectClientData._id)
+        //   .emit("add_remove_project_assignee", "Success");
 
         const assigneeMail = eachProjectClientData.email;
         const subjects = "Project Members Changed";
@@ -1284,9 +1287,9 @@ exports.assignProject = async (req, res) => {
           const sendMsgs = `Members of the project "${project.project_name}" changed by ${user.name}`;
           sendMail(assigneeMail, subjects, sendMsgs);
         }
-        req.io
-          .to(creatorData._id)
-          .emit("add_remove_project_assignee", "Success");
+        // req.io
+        //   .to(creatorData._id)
+        //   .emit("add_remove_project_assignee", "Success");
       }
     }
     if (totalUserList && totalUserList.length > 0) {
@@ -1311,9 +1314,9 @@ exports.assignProject = async (req, res) => {
           const sendMsgs = `Members of the project "${project.project_name}" changed by ${user.name}`;
           sendMail(assigneeMail, subjects, sendMsgs);
         }
-        req.io
-          .to(singleUser._id)
-          .emit("add_remove_project_assignee", "Success");
+        // req.io
+        //   .to(singleUser._id)
+        //   .emit("add_remove_project_assignee", "Success");
       }
     }
     if (sendTo.length > 0) {
@@ -1325,6 +1328,8 @@ exports.assignProject = async (req, res) => {
         send_to: sendTo,
       });
     }
+
+    req.io.emit("add_remove_project_assignee", "Success");
 
     let log = {
       date_time: new Date(),
@@ -1503,9 +1508,9 @@ exports.assignTeamLeader = async (req, res) => {
           await sendPushNotification(message);
         }
 
-        req.io
-          .to(eachProjectAssigneeData._id)
-          .emit("add_remove_project_leader", "Success");
+        // req.io
+        //   .to(eachProjectAssigneeData._id)
+        //   .emit("add_remove_project_leader", "Success");
 
         const assigneeMail = eachProjectAssigneeData.email;
         const subjects = "Project Leader Updated";
@@ -1538,9 +1543,9 @@ exports.assignTeamLeader = async (req, res) => {
           const sendMsgs = `Leader of the project "${project.project_name}" changed by ${user.name}`;
           sendMail(assigneeMail, subjects, sendMsgs);
         }
-        req.io
-          .to(eachProjectLeaderData._id)
-          .emit("add_remove_project_leader", "Success");
+        // req.io
+        //   .to(eachProjectLeaderData._id)
+        //   .emit("add_remove_project_leader", "Success");
       }
     }
     if (updatedProject.project_client) {
@@ -1562,9 +1567,9 @@ exports.assignTeamLeader = async (req, res) => {
           await sendPushNotification(message);
         }
 
-        req.io
-          .to(eachProjectClientData._id)
-          .emit("add_remove_project_leader", "Success");
+        // req.io
+        //   .to(eachProjectClientData._id)
+        //   .emit("add_remove_project_leader", "Success");
 
         const assigneeMail = eachProjectClientData.email;
         const subjects = "Project Leader Updated";
@@ -1596,7 +1601,7 @@ exports.assignTeamLeader = async (req, res) => {
           const sendMsgs = `Leader of the project "${project.project_name}" changed by ${user.name}`;
           sendMail(assigneeMail, subjects, sendMsgs);
         }
-        req.io.to(creatorData._id).emit("add_remove_project_leader", "Success");
+        // req.io.to(creatorData._id).emit("add_remove_project_leader", "Success");
       }
     }
     if (totalUserList && totalUserList.length > 0) {
@@ -1621,7 +1626,7 @@ exports.assignTeamLeader = async (req, res) => {
           const sendMsgs = `Leader of the project "${project.project_name}" changed by ${user.name}`;
           sendMail(assigneeMail, subjects, sendMsgs);
         }
-        req.io.to(singleUser._id).emit("add_remove_project_leader", "Success");
+        // req.io.to(singleUser._id).emit("add_remove_project_leader", "Success");
       }
     }
     if (sendTo.length > 0) {
@@ -1633,6 +1638,8 @@ exports.assignTeamLeader = async (req, res) => {
         send_to: sendTo,
       });
     }
+
+    req.io.emit("add_remove_project_leader", "Success");
 
     let log = {
       date_time: new Date(),
@@ -1758,9 +1765,9 @@ exports.addProjectAttachment = async (req, res) => {
                   await sendPushNotification(message);
                 }
               }
-              req.io
-                .to(assigneeData._id)
-                .emit("project_attachment_added", "Success");
+              // req.io
+              //   .to(assigneeData._id)
+              //   .emit("project_attachment_added", "Success");
             }
           });
           docs.project_leader.map(async (leader_id) => {
@@ -1779,9 +1786,9 @@ exports.addProjectAttachment = async (req, res) => {
                   await sendPushNotification(message);
                 }
               }
-              req.io
-                .to(leaderData._id)
-                .emit("project_attachment_added", "Success");
+              // req.io
+              //   .to(leaderData._id)
+              //   .emit("project_attachment_added", "Success");
             }
           });
           const clientData = await User.findById(docs.project_client);
@@ -1799,9 +1806,9 @@ exports.addProjectAttachment = async (req, res) => {
                 await sendPushNotification(message);
               }
             }
-            req.io
-              .to(clientData._id)
-              .emit("project_attachment_added", "Success");
+            // req.io
+            //   .to(clientData._id)
+            //   .emit("project_attachment_added", "Success");
           }
           const creatorData = await User.findById(docs.created_by);
           if (creatorData) {
@@ -1818,9 +1825,9 @@ exports.addProjectAttachment = async (req, res) => {
                 await sendPushNotification(message);
               }
             }
-            req.io
-              .to(creatorData._id)
-              .emit("project_attachment_added", "Success");
+            // req.io
+            //   .to(creatorData._id)
+            //   .emit("project_attachment_added", "Success");
           }
           if (totalUserList && totalUserList.length > 0) {
             for (let singleUser of totalUserList) {
@@ -1837,9 +1844,9 @@ exports.addProjectAttachment = async (req, res) => {
                   await sendPushNotification(message);
                 }
               }
-              req.io
-                .to(singleUser._id)
-                .emit("project_attachment_added", "Success");
+              // req.io
+              //   .to(singleUser._id)
+              //   .emit("project_attachment_added", "Success");
             }
           }
           if (sendTo.length > 0) {
@@ -1851,6 +1858,8 @@ exports.addProjectAttachment = async (req, res) => {
               send_to: sendTo,
             });
           }
+
+          req.io.emit("project_attachment_added", "Success");
 
           let log = {
             date_time: new Date(),
@@ -1961,9 +1970,9 @@ exports.deleteProjectAttachment = async (req, res) => {
                   await sendPushNotification(message);
                 }
               }
-              req.io
-                .to(assigneeData._id)
-                .emit("project_attachment_deleted", "Success");
+              // req.io
+              //   .to(assigneeData._id)
+              //   .emit("project_attachment_deleted", "Success");
             }
           });
           docs.project_leader.map(async (leader_id) => {
@@ -1982,9 +1991,9 @@ exports.deleteProjectAttachment = async (req, res) => {
                   await sendPushNotification(message);
                 }
               }
-              req.io
-                .to(leaderData._id)
-                .emit("project_attachment_deleted", "Success");
+              // req.io
+              //   .to(leaderData._id)
+              //   .emit("project_attachment_deleted", "Success");
             }
           });
           const clientData = await User.findById(docs.project_client);
@@ -2002,9 +2011,9 @@ exports.deleteProjectAttachment = async (req, res) => {
                 await sendPushNotification(message);
               }
             }
-            req.io
-              .to(clientData._id)
-              .emit("project_attachment_deleted", "Success");
+            // req.io
+            //   .to(clientData._id)
+            //   .emit("project_attachment_deleted", "Success");
           }
           const creatorData = await User.findById(docs.created_by);
           if (creatorData) {
@@ -2021,9 +2030,9 @@ exports.deleteProjectAttachment = async (req, res) => {
                 await sendPushNotification(message);
               }
             }
-            req.io
-              .to(creatorData._id)
-              .emit("project_attachment_deleted", "Success");
+            // req.io
+            //   .to(creatorData._id)
+            //   .emit("project_attachment_deleted", "Success");
           }
           if (totalUserList && totalUserList.length > 0) {
             for (let singleUser of totalUserList) {
@@ -2040,9 +2049,9 @@ exports.deleteProjectAttachment = async (req, res) => {
                   await sendPushNotification(message);
                 }
               }
-              req.io
-                .to(singleUser._id)
-                .emit("project_attachment_deleted", "Success");
+              // req.io
+              //   .to(singleUser._id)
+              //   .emit("project_attachment_deleted", "Success");
             }
           }
           if (sendTo.length > 0) {
@@ -2054,6 +2063,8 @@ exports.deleteProjectAttachment = async (req, res) => {
               send_to: sendTo,
             });
           }
+
+          req.io.emit("project_attachment_deleted", "Success");
 
           let log = {
             date_time: new Date(),

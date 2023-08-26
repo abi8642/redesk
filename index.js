@@ -97,10 +97,10 @@ io.on("connection", (socket) => {
   });
 
   //Chat Sockets
-  socket.on("setup", (id) => {
-    socket.join(id);
-    socket.emit("connected", "connected event after setup event listen");
-  });
+  // socket.on("setup", (id) => {
+  //   socket.join(id);
+  //   socket.emit("connected", "connected event after setup event listen");
+  // });
 
   socket.on("join chat", (room) => {
     socket.join(room);

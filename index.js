@@ -97,8 +97,8 @@ io.on("connection", (socket) => {
   });
 
   //Chat Sockets
-  socket.on("setup", (userData) => {
-    socket.join(userData._id);
+  socket.on("setup", (id) => {
+    socket.join(id);
     socket.emit("connected", "connected event after setup event listen");
   });
 

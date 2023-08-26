@@ -138,7 +138,6 @@ exports.createOrganisation = async (req, res) => {
       );
     }
   } catch (err) {
-    console.log(err);
     return res.status(400).send({
       status: "400",
       message: "Something went wrong" + err,
@@ -333,11 +332,9 @@ exports.sendInviteFromOrganisation = async (req, res) => {
       }
     );
   } catch (err) {
-    console.log(err);
     return res.status(500).send({
       status: "500",
-      message: "Unable to send invitation. Try again later",
-      err,
+      message: "Unable to send invitation. Try again later" + err,
     });
   }
 };
@@ -795,7 +792,6 @@ exports.createCategory = async (req, res) => {
 exports.allCategories = async (req, res) => {
   try {
     const user = req.user;
-    console.log("user", user);
     const categories = await Organisation.findOne(
       { _id: user.organisation.organisation },
       { projectCategories: 1 }
@@ -934,7 +930,6 @@ exports.editCategory = async (req, res) => {
       data: newCategory,
     });
   } catch (err) {
-    console.log("err", err);
     return res.status(400).send({
       status: "400",
       message: "Something went wrong" + err,

@@ -864,10 +864,9 @@ exports.editTask = async (req, res) => {
           .send({ status: "200", message: "Succesffully Updated Task" });
       })
       .catch((err) => {
-        console.log("error", err);
         return res.status(500).send({
           status: 500,
-          message: "Failed to update. Try again later",
+          message: "Failed to update. Try again later" + err,
         });
       });
   } catch (err) {

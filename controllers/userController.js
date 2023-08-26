@@ -285,10 +285,9 @@ exports.selectOrganization = async (req, res) => {
       }
     );
   } catch (err) {
-    console.log(err);
     return res
       .status(500)
-      .send({ status: "500", message: "Unable to Register user" });
+      .send({ status: "500", message: "Unable to Register user" + err });
   }
 };
 

@@ -45,6 +45,7 @@ const io = require("socket.io")(server, {
 
 io.on("connection", (socket) => {
   socket.on("userJoin", (id) => {
+    console.log("user joined ", id);
     socket.join(id);
   });
 
@@ -68,7 +69,6 @@ io.on("connection", (socket) => {
 
   socket.on("join", (data) => {
     socket.join(data.im);
-    console.log("user joined room " + data.im);
   });
 
   socket.on("sendComment", (data) => {
@@ -99,7 +99,7 @@ io.on("connection", (socket) => {
   //Chat Sockets
   socket.on("setup", (userData) => {
     socket.join(userData._id);
-    socket.emit("connected");
+    socket.emit("connected", "connected event after setup event listen");
   });
 
   socket.on("join chat", (room) => {

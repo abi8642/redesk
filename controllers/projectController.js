@@ -366,10 +366,10 @@ exports.getProjectById = async (req, res) => {
           .send({ status: "200", message: "Project Details", projectDetails });
       })
       .catch((err) => {
-        console.log("err", err);
         return res.status(500).send({
           status: "500",
-          message: "Failed to retrieve the Project details. Try again later",
+          message:
+            "Failed to retrieve the Project details. Try again later" + err,
         });
       });
   } catch (err) {
@@ -1351,7 +1351,6 @@ exports.assignProject = async (req, res) => {
       data,
     });
   } catch (err) {
-    console.log(err);
     return res.status(500).send({
       status: "500",
       message: "Failed to update project. Try again later" + err,

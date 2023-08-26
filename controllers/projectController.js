@@ -89,7 +89,6 @@ exports.createProject = async (req, res) => {
               // req.io
               //   .to(eachProjectAssigneeData._id)
               //   .emit("project_created", "Success");
-              req.io.emit("project_created", "Success");
 
               const assigneeMail = eachProjectAssigneeData.email;
               const subjects = "You are assign on a project";
@@ -133,9 +132,9 @@ exports.createProject = async (req, res) => {
                   `;
                 sendMail(assigneeMail, subjects, sendMsgs);
               }
-              req.io
-                .to(eachProjectLeaderData._id)
-                .emit("project_created", "Success");
+              // req.io
+              //   .to(eachProjectLeaderData._id)
+              //   .emit("project_created", "Success");
             }
           }
         }
@@ -158,9 +157,9 @@ exports.createProject = async (req, res) => {
               await sendPushNotification(message);
             }
 
-            req.io
-              .to(eachProjectClientData._id)
-              .emit("project_created", "Success");
+            // req.io
+            //   .to(eachProjectClientData._id)
+            //   .emit("project_created", "Success");
 
             const assigneeMail = eachProjectClientData.email;
             const subjects = "New Project Assigned";
@@ -201,7 +200,6 @@ exports.createProject = async (req, res) => {
               sendMail(assigneeMail, subjects, sendMsgs);
             }
             // req.io.to(singleUser._id).emit("project_created", "Success");
-            req.io.emit("project_created", "Success");
           }
         }
         if (sendTo.length > 0) {
@@ -222,6 +220,7 @@ exports.createProject = async (req, res) => {
             send_to: sendToAdmin,
           });
         }
+        req.io.emit("project_created", "Success");
 
         if (project) {
           return res
@@ -627,9 +626,9 @@ exports.editProject = async (req, res) => {
                 };
                 await sendPushNotification(message);
               }
-              // req.io
-              //   .to(eachProjectAssigneeData._id)
-              //   .emit("project_updated", "Success");
+              req.io
+                .to(eachProjectAssigneeData._id)
+                .emit("project_updated", "Success");
 
               const assigneeMail = eachProjectAssigneeData.email;
               const subjects = "Project Updated";
@@ -674,9 +673,9 @@ exports.editProject = async (req, res) => {
                   `;
                 sendMail(assigneeMail, subjects, sendMsgs);
               }
-              // req.io
-              //   .to(eachProjectLeaderData._id)
-              //   .emit("project_updated", "Success");
+              req.io
+                .to(eachProjectLeaderData._id)
+                .emit("project_updated", "Success");
             }
           }
         }
@@ -699,9 +698,9 @@ exports.editProject = async (req, res) => {
               await sendPushNotification(message);
             }
 
-            // req.io
-            //   .to(eachProjectClientData._id)
-            //   .emit("project_updated", "Success");
+            req.io
+              .to(eachProjectClientData._id)
+              .emit("project_updated", "Success");
 
             const assigneeMail = eachProjectClientData.email;
             const subjects = "Project Updated";
@@ -731,7 +730,6 @@ exports.editProject = async (req, res) => {
               }
             }
             req.io.to(creatorData._id).emit("project_updated", "Success");
-            // req.io.emit("project_updated", "Success");
           }
         }
         if (totalUserList && totalUserList.length > 0) {
@@ -758,7 +756,7 @@ exports.editProject = async (req, res) => {
               Project_created_by: <b>${user.name}</b>`;
               sendMail(assigneeMail, subjects, sendMsgs);
             }
-            // req.io.to(singleUser._id).emit("project_updated", "Success");
+            req.io.to(singleUser._id).emit("project_updated", "Success");
           }
         }
         if (sendTo.length > 0) {
@@ -770,7 +768,6 @@ exports.editProject = async (req, res) => {
             send_to: sendTo,
           });
         }
-        req.io.emit("project_updated", "Success");
 
         return res.status(200).send({
           status: "200",

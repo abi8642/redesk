@@ -217,23 +217,47 @@ router.put("/editClient/:id", requiredAuth(), param("id").notEmpty(), userEdit);
 router.post("/changeLoginStatus", requiredAuth(), changeLoginStatus);
 
 //task apis start
-router.post("/Task", requiredAuth(), createTask);
-router.get("/taskList", requiredAuth(), getTask);
+router.post(
+  "/Task",
+  requiredAuth(["admin", "subadmin", "team_leader", "user"]),
+  createTask
+);
+router.get(
+  "/taskList",
+  requiredAuth(["admin", "subadmin", "team_leader", "user"]),
+  getTask
+);
 router.get("/taskListByProject/:id", requiredAuth(), getTaskByProject);
 router.post("/taskArray", requiredAuth(), getTaskArray);
 router.get("/taskArrayByProject/:id", requiredAuth(), getTaskArray);
-router.delete("/task/:id", requiredAuth(), deleteTask);
+router.delete(
+  "/task/:id",
+  requiredAuth(["admin", "subadmin", "team_leader", "user"]),
+  deleteTask
+);
 router.get("/taskListByUser", requiredAuth(), getTaskByUser);
 router.get("/task/:id", requiredAuth(), getTaskById);
-router.put("/taskEdit/:id", requiredAuth(), editTask);
-router.put("/taskClose/:id", requiredAuth(), closeTask);
+router.put(
+  "/taskEdit/:id",
+  requiredAuth(["admin", "subadmin", "team_leader", "user"]),
+  editTask
+);
+router.put(
+  "/taskClose/:id",
+  requiredAuth(["admin", "subadmin", "team_leader", "user"]),
+  closeTask
+);
 router.get(
   "/taskReminder/:id",
   requiredAuth(["admin", "subadmin", "team_leader"]),
   reminderTask
 );
 router.get("/taskcount", requiredAuth(), getTaskCount);
-router.post("/changeTaskStatus/:id", requiredAuth(), changeTaskStatus);
+router.post(
+  "/changeTaskStatus/:id",
+  requiredAuth(["admin", "subadmin", "team_leader", "user"]),
+  changeTaskStatus
+);
 router.post(
   "/addTaskComment",
   requiredAuth(),

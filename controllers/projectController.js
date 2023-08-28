@@ -11,7 +11,6 @@ const { createLog } = require("../controllers/logController");
 exports.createProject = async (req, res) => {
   try {
     const user = req.user;
-
     const d = new Date();
     const month = d.getMonth() + 1;
     const year = d.getFullYear();

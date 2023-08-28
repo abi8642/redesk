@@ -247,8 +247,20 @@ exports.getProjectMembers = async (req, res) => {
 
     if (!projectId) {
       return res.status(400).send({
-        status: "400",
+        status: 400,
         message: "Project Id is required",
+      });
+    }
+
+    let projectData = await projectModel.findOne({
+      _id: req.params.id,
+      organisation: user.organisation.organisation,
+    });
+
+    if (!projectData) {
+      return res.status(400).send({
+        status: 400,
+        message: "No Project Found for this ID",
       });
     }
 
@@ -267,14 +279,14 @@ exports.getProjectMembers = async (req, res) => {
       ],
     };
 
-    const projectData = await projectModel
+    projectData = await projectModel
       .findOne(condition)
       .populate("project_leader project_assignee", "name pic email");
 
     if (!projectData) {
-      return res.status(500).send({
-        status: "500",
-        message: "Failed to retrieve the Project List. Try again later",
+      return res.status(403).send({
+        status: 403,
+        message: "You can't access this project",
       });
     }
 
@@ -284,10 +296,10 @@ exports.getProjectMembers = async (req, res) => {
 
     return res
       .status(200)
-      .send({ status: "200", message: "Project Member List", members });
+      .send({ status: 200, message: "Project Member List", members });
   } catch (err) {
     return res.status(500).send({
-      status: "500",
+      status: 500,
       message: "Failed to retrieve the Project Member List. Try again later",
     });
   }
@@ -346,6 +358,18 @@ exports.getProjectById = async (req, res) => {
     const user = req.user;
     const projectId = { _id: req.params.id };
 
+    let projectData = await projectModel.findOne({
+      _id: req.params.id,
+      organisation: user.organisation.organisation,
+    });
+
+    if (!projectData) {
+      return res.status(400).send({
+        status: 400,
+        message: "No Project Found for this ID",
+      });
+    }
+
     const condition = {
       $and: [
         projectId,
@@ -361,14 +385,14 @@ exports.getProjectById = async (req, res) => {
       ],
     };
 
-    const projectData = await projectModel
+    projectData = await projectModel
       .findOne(condition)
       .populate("project_leader project_assignee", "_id name pic");
 
     if (!projectData) {
       return res.status(403).send({
-        status: "403",
-        message: "You are not allowed to access the project",
+        status: 403,
+        message: "You can't access this project",
       });
     }
 
@@ -396,6 +420,18 @@ exports.getTaskCountByProject = async (req, res) => {
     const user = req.user;
     const projectId = { project_id: req.params.id };
 
+    let projectData = await projectModel.findOne({
+      _id: req.params.id,
+      organisation: user.organisation.organisation,
+    });
+
+    if (!projectData) {
+      return res.status(400).send({
+        status: 400,
+        message: "No Project Found for this ID",
+      });
+    }
+
     const condition = {
       $and: [
         projectId,
@@ -411,7 +447,7 @@ exports.getTaskCountByProject = async (req, res) => {
       ],
     };
 
-    const projectData = await projectModel.findOne(condition);
+    projectData = await projectModel.findOne(condition);
 
     if (projectData) {
       taskModel.find(projectId, "task_status", (err, docs) => {
@@ -460,13 +496,13 @@ exports.getTaskCountByProject = async (req, res) => {
       });
     } else {
       return res.status(403).send({
-        status: "403",
-        message: "You are not allowed to access the project",
+        status: 403,
+        message: "You can't access this project",
       });
     }
   } catch (err) {
     return res.status(500).send({
-      status: "500",
+      status: 500,
       message: "Failed to retrieve the Project List. Try again later",
     });
   }
@@ -507,30 +543,42 @@ exports.getTaskByStatus = async (req, res) => {
       ],
     };
 
-    const projectData = await projectModel.findOne(projectCondition);
+    let projectData = await projectModel.findOne({
+      _id: projectId,
+      organisation: user.organisation.organisation,
+    });
+
+    if (!projectData) {
+      return res.status(400).send({
+        status: 400,
+        message: "No Project Found for this ID",
+      });
+    }
+
+    projectData = await projectModel.findOne(projectCondition);
     const taskCondition = { project_id: projectId, task_status: taskStatus };
 
     if (!projectData) {
       return res.status(403).send({
-        status: "403",
-        message: "You are not allowed to access the project",
+        status: 403,
+        message: "You can't access this project",
       });
     }
     taskModel.find(taskCondition, (err, docs) => {
       if (!err) {
         return res
           .status(200)
-          .send({ status: "200", message: "Task List", docs });
+          .send({ status: 200, message: "Task List", docs });
       } else {
         return res.status(500).send({
-          status: "500",
+          status: 500,
           message: "Failed to retrieve data. Try again later",
         });
       }
     });
   } catch (err) {
     return res.status(500).send({
-      status: "500",
+      status: 500,
       message: "Failed to retrieve data. Try again later",
     });
   }

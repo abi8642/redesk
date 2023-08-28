@@ -357,7 +357,7 @@ exports.getTaskByProject = async (req, res) => {
       !projectData.project_leader.includes(user.id)
     ) {
       return res.status(403).send({
-        status: "403",
+        status: 403,
         message: "You can't access this project",
       });
     }
@@ -586,26 +586,25 @@ exports.getTaskById = async (req, res) => {
         $and: [task_id, { task_assignee: user.id }],
       };
     }
-    TaskModel.findOne(query)
-      .populate({
-        path: "project_id comments.user created_by task_assignee",
-        select:
-          "project_name project_desc project_status project_priority project_start_date project_end_date created_by name pic email",
-        populate: {
-          path: "project_assignee project_leader created_by",
-          select: "name email pic",
-          model: "User",
-        },
-      })
-      .exec(async (err, docs) => {
-        if (!err) {
-          return res.status(200).send({ status: "200", message: "Task", docs });
-        }
-        return res.status(500).send({
-          status: "500",
-          message: "Failed to retrieve the task details. Try again later" + err,
-        });
+    taskData = await TaskModel.findOne(query).populate({
+      path: "project_id comments.user created_by task_assignee",
+      select:
+        "project_name project_desc project_status project_priority project_start_date project_end_date created_by name pic email",
+      populate: {
+        path: "project_assignee project_leader created_by",
+        select: "name email pic",
+        model: "User",
+      },
+    });
+
+    if (!taskData) {
+      return res.status(400).send({
+        status: "400",
+        message: "You can't access this task",
       });
+    }
+
+    return res.status(200).send({ status: "200", message: "Task", docs });
   } catch (err) {
     return res.status(500).send({
       status: "500",

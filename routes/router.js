@@ -52,7 +52,7 @@ const {
   getTaskCount,
   getTaskArray,
   addTaskComment,
-  deleteTask,
+  // deleteTask,
 } = require("../controllers/taskController");
 const {
   createProject,
@@ -230,11 +230,11 @@ router.get(
 router.get("/taskListByProject/:id", requiredAuth(), getTaskByProject);
 router.post("/taskArray", requiredAuth(), getTaskArray);
 router.get("/taskArrayByProject/:id", requiredAuth(), getTaskArray);
-router.delete(
-  "/task/:id",
-  requiredAuth(["admin", "subadmin", "team_leader", "user"]),
-  deleteTask
-);
+// router.delete(
+//   "/task/:id",
+//   requiredAuth(["admin", "subadmin", "team_leader", "user"]),
+//   deleteTask
+// );
 router.get("/taskListByUser", requiredAuth(), getTaskByUser);
 router.get("/task/:id", requiredAuth(), getTaskById);
 router.put(

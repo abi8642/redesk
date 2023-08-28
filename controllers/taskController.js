@@ -532,61 +532,6 @@ exports.getTaskArray = async (req, res) => {
   }
 };
 
-exports.deleteTask = async (req, res) => {
-  try {
-    const user = req.user;
-    const task_id = { _id: req.params.id, organisation: user.organisation };
-    const task = await TaskModel.findOne(task_id, "project_id");
-    if (!task) {
-      return res.status(500).send({
-        status: "500",
-        message: "Failed to retrieve the task List. Try again later",
-      });
-    }
-    const docs1 = await User.find({
-      role: "admin",
-      organisation: user.organisation,
-    });
-    const docs = await ProjectModel.findOne({
-      _id: task.project_id,
-      organisation: user.organisation,
-    }).populate("project_leader project_assignee", "name pic");
-    let members = [];
-    if (!docs)
-      return res.status(500).send({
-        status: "500",
-        message: "Failed to retrieve the task List. Try again later",
-      });
-
-    // console.log(docs1);
-    members.push(...docs.project_leader);
-
-    members.push(...docs.project_assignee);
-    members.push(...docs1);
-
-    let isUserOfSameProj = members.find((item) => {
-      // console.log(item._id, user._id);
-      return item._id + "" == user._id + "";
-    });
-    // console.log(members, isUserOfSameProj);
-    if (!isUserOfSameProj) {
-      return res.status(500).send({
-        status: "500",
-        message: "You are not allowed to delete this task",
-      });
-    }
-    await task.remove();
-    return res
-      .status(200)
-      .send({ status: "200", message: "Task Deleted Successfully" });
-  } catch (err) {
-    return res.status(500).send({
-      status: "500",
-      message: "Failed to delete task. Try again later",
-    });
-  }
-};
-
 exports.getTaskByUser = async (req, res) => {
   try {
     const user = req.user;
@@ -1183,7 +1128,7 @@ exports.changeTaskStatus = async (req, res) => {
   }
 };
 
-// task reminder route
+// send task reminder to task assignee
 exports.reminderTask = async (req, res) => {
   try {
     const user = req.user;
@@ -1511,3 +1456,58 @@ exports.getTaskCount = async (req, res) => {
     });
   }
 };
+
+// exports.deleteTask = async (req, res) => {
+//   try {
+//     const user = req.user;
+//     const task_id = { _id: req.params.id, organisation: user.organisation };
+//     const task = await TaskModel.findOne(task_id, "project_id");
+//     if (!task) {
+//       return res.status(400).send({
+//         status: "400",
+//         message: "Failed to retrieve the task List. Try again later",
+//       });
+//     }
+//     const docs1 = await User.find({
+//       role: "admin",
+//       organisation: user.organisation,
+//     });
+//     const docs = await ProjectModel.findOne({
+//       _id: task.project_id,
+//       organisation: user.organisation,
+//     }).populate("project_leader project_assignee", "name pic");
+//     let members = [];
+//     if (!docs)
+//       return res.status(500).send({
+//         status: "500",
+//         message: "Failed to retrieve the task List. Try again later",
+//       });
+
+//     // console.log(docs1);
+//     members.push(...docs.project_leader);
+
+//     members.push(...docs.project_assignee);
+//     members.push(...docs1);
+
+//     let isUserOfSameProj = members.find((item) => {
+//       // console.log(item._id, user._id);
+//       return item._id + "" == user._id + "";
+//     });
+//     // console.log(members, isUserOfSameProj);
+//     if (!isUserOfSameProj) {
+//       return res.status(500).send({
+//         status: "500",
+//         message: "You are not allowed to delete this task",
+//       });
+//     }
+//     await task.remove();
+//     return res
+//       .status(200)
+//       .send({ status: "200", message: "Task Deleted Successfully" });
+//   } catch (err) {
+//     return res.status(500).send({
+//       status: "500",
+//       message: "Failed to delete task. Try again later",
+//     });
+//   }
+// };

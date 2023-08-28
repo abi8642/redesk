@@ -264,7 +264,7 @@ exports.getProjectMembers = async (req, res) => {
       });
     }
 
-    const condition = {
+    let condition = {
       $and: [
         projectId,
         { organisation: user.organisation.organisation },
@@ -278,6 +278,15 @@ exports.getProjectMembers = async (req, res) => {
         },
       ],
     };
+
+    if (
+      user.organisation.role === "admin" ||
+      user.organisation.role === "subadmin"
+    ) {
+      condition = {
+        $and: [projectId, { organisation: user.organisation.organisation }],
+      };
+    }
 
     projectData = await projectModel
       .findOne(condition)
@@ -370,7 +379,7 @@ exports.getProjectById = async (req, res) => {
       });
     }
 
-    const condition = {
+    let condition = {
       $and: [
         projectId,
         { organisation: user.organisation.organisation },
@@ -384,6 +393,15 @@ exports.getProjectById = async (req, res) => {
         },
       ],
     };
+
+    if (
+      user.organisation.role === "admin" ||
+      user.organisation.role === "subadmin"
+    ) {
+      condition = {
+        $and: [projectId, { organisation: user.organisation.organisation }],
+      };
+    }
 
     projectData = await projectModel
       .findOne(condition)
@@ -432,7 +450,7 @@ exports.getTaskCountByProject = async (req, res) => {
       });
     }
 
-    const condition = {
+    let condition = {
       $and: [
         projectId,
         { organisation: user.organisation.organisation },
@@ -446,6 +464,15 @@ exports.getTaskCountByProject = async (req, res) => {
         },
       ],
     };
+
+    if (
+      user.organisation.role === "admin" ||
+      user.organisation.role === "subadmin"
+    ) {
+      condition = {
+        $and: [projectId, { organisation: user.organisation.organisation }],
+      };
+    }
 
     projectData = await projectModel.findOne(condition);
 
@@ -528,7 +555,7 @@ exports.getTaskByStatus = async (req, res) => {
         message: `${blankFields} is required`,
       });
     }
-    const projectCondition = {
+    let projectCondition = {
       $and: [
         { _id: projectId },
         { organisation: user.organisation.organisation },
@@ -542,6 +569,15 @@ exports.getTaskByStatus = async (req, res) => {
         },
       ],
     };
+
+    if (
+      user.organisation.role === "admin" ||
+      user.organisation.role === "subadmin"
+    ) {
+      projectCondition = {
+        $and: [projectId, { organisation: user.organisation.organisation }],
+      };
+    }
 
     let projectData = await projectModel.findOne({
       _id: projectId,

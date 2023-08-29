@@ -300,8 +300,8 @@ exports.getProjectMembers = async (req, res) => {
     }
 
     let members = [];
-    members.push(...docs.project_leader);
-    members.push(...docs.project_assignee);
+    members.push(...projectData.project_leader);
+    members.push(...projectData.project_assignee);
 
     return res
       .status(200)
@@ -309,7 +309,8 @@ exports.getProjectMembers = async (req, res) => {
   } catch (err) {
     return res.status(500).send({
       status: 500,
-      message: "Failed to retrieve the Project Member List. Try again later",
+      message:
+        "Failed to retrieve the Project Member List. Try again later" + err,
     });
   }
 };
@@ -398,9 +399,7 @@ exports.getProjectById = async (req, res) => {
       user.organisation.role === "admin" ||
       user.organisation.role === "subadmin"
     ) {
-      condition = {
-        $and: [projectId, { organisation: user.organisation.organisation }],
-      };
+      condition = projectId;
     }
 
     projectData = await projectModel
@@ -415,7 +414,7 @@ exports.getProjectById = async (req, res) => {
     }
 
     const projectDetails = {
-      project: docs,
+      project: projectData,
     };
     const tasks = await taskModel
       .find({ project_id: req.params.id })
@@ -428,7 +427,7 @@ exports.getProjectById = async (req, res) => {
   } catch (err) {
     return res.status(500).send({
       status: "500",
-      message: "Failed to retrieve data. Try again later",
+      message: "Failed to retrieve data. Try again later" + err,
     });
   }
 };
@@ -436,7 +435,7 @@ exports.getProjectById = async (req, res) => {
 exports.getTaskCountByProject = async (req, res) => {
   try {
     const user = req.user;
-    const projectId = { project_id: req.params.id };
+    const projectId = { _id: req.params.id };
 
     let projectData = await projectModel.findOne({
       _id: req.params.id,
@@ -469,9 +468,7 @@ exports.getTaskCountByProject = async (req, res) => {
       user.organisation.role === "admin" ||
       user.organisation.role === "subadmin"
     ) {
-      condition = {
-        $and: [projectId, { organisation: user.organisation.organisation }],
-      };
+      condition = projectId;
     }
 
     projectData = await projectModel.findOne(condition);
@@ -575,7 +572,10 @@ exports.getTaskByStatus = async (req, res) => {
       user.organisation.role === "subadmin"
     ) {
       projectCondition = {
-        $and: [projectId, { organisation: user.organisation.organisation }],
+        $and: [
+          { _id: projectId },
+          { organisation: user.organisation.organisation },
+        ],
       };
     }
 
